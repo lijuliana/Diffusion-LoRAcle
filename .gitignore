@@ -1,0 +1,34 @@
+# Secrets, private mappings, scratch — NEVER commit (see WORKING_NORMS §2)
+notes/
+*.env
+.env
+**/secrets*
+**/*token*
+
+# Weights, caches, large artifacts — push only small structured results
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+results/**/*.safetensors
+data_cache/
+hf_cache/
+*.npy
+*.npz
+
+# Downloaded assets / model caches — never commit (large + license-bound)
+assets/
+*.safetensors
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

@@ -1,0 +1,32 @@
+[project]
+name = "ditloracle"
+version = "0.0.1"
+description = "A weight-to-language reader for diffusion transformers (DiT-LoRAcle)"
+requires-python = ">=3.10"
+# Kept compatible with the cluster image (torch 2.9 / transformers 5.6 / peft 0.18)
+# AND local dev (torch 2.12). Avoid torch-2.12-only APIs in code destined for the pod.
+dependencies = [
+    "torch>=2.9",
+    "numpy>=1.26",
+    "safetensors>=0.4",
+    "scikit-learn>=1.4",   # linear probes + logistic-regression baselines (POC-1)
+]
+
+[project.optional-dependencies]
+data = [
+    "huggingface-hub>=0.25",
+    "requests>=2.31",      # CivitAI API
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ditloracle*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
