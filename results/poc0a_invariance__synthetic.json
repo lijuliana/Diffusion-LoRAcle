@@ -1,0 +1,19 @@
+{
+  "gl_gauge_rel_change_vs_condition": {
+    "cond_1e0": 9.147477717512436e-14,
+    "cond_1e2": 5.1697839311283776e-14,
+    "cond_1e4": 2.2732184644842094e-12,
+    "cond_1e6": 3.697852596705938e-10,
+    "cond_1e8": 1.8447275582027868e-08
+  },
+  "coupled_sign_rel_change": 0.0,
+  "degenerate_clusters_detected": [
+    3,
+    1,
+    1,
+    1
+  ],
+  "degeneracy_safe_rel_change": 9.837425589569003e-16,
+  "naive_rel_change_on_degeneracy": 0.8682181762417304,
+  "genuine_change_rel_change": 0.7133443289043001
+}
