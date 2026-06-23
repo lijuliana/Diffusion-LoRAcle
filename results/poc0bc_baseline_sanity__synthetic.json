@@ -1,0 +1,40 @@
+{
+  "no_gauge": {
+    "spectral_stat": {
+      "cv_acc_mean": 0.25,
+      "cv_acc_std": 0.0
+    },
+    "raw_ab": {
+      "cv_acc_mean": 1.0,
+      "cv_acc_std": 0.0
+    },
+    "w2t_svd": {
+      "cv_acc_mean": 0.9667,
+      "cv_acc_std": 0.0212
+    },
+    "our_svd": {
+      "cv_acc_mean": 0.9958,
+      "cv_acc_std": 0.0083
+    }
+  },
+  "with_gauge": {
+    "spectral_stat": {
+      "cv_acc_mean": 0.25,
+      "cv_acc_std": 0.0
+    },
+    "raw_ab": {
+      "cv_acc_mean": 0.4458,
+      "cv_acc_std": 0.1219
+    },
+    "w2t_svd": {
+      "cv_acc_mean": 0.4708,
+      "cv_acc_std": 0.0568
+    },
+    "our_svd": {
+      "cv_acc_mean": 1.0,
+      "cv_acc_std": 0.0
+    }
+  },
+  "chance": 0.25,
+  "setup": "4 classes defined by SVD directions, SHARED spectrum across classes. no_gauge: clean factors. with_gauge: per-instance GL(r) randomization of (B,A) \u2014 leaves \u0394W and our canonical encoding invariant but scrambles raw A/B (the realistic LoRA-init nuisance)."
+}

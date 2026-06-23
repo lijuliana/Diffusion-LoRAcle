@@ -1,0 +1,474 @@
+{
+  "n_files": 25,
+  "per_file": [
+    {
+      "repo": "XLabs-AI/flux-RealismLora",
+      "size_mb": 22.4,
+      "scheme": "unknown",
+      "n_modules": 0,
+      "verdict": "unparseable",
+      "n_factor_pairs": 0
+    },
+    {
+      "repo": "Muapi/nobody_7-pale-female-uncensored-flux1.d",
+      "size_mb": 153.3,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 5.186122027867064,
+        "sigma_min_over_max": 0.0034535558797415505,
+        "min_norm_gap": 1.3062798916466179e-05,
+        "median_norm_gap": 0.0003955011039203792,
+        "n_near_degenerate_dirs": 11
+      }
+    },
+    {
+      "repo": "alfredplpl/flux.1-dev-modern-anime-lora",
+      "size_mb": 153.3,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 2.1383000059561184,
+        "sigma_min_over_max": 0.032728331699121954,
+        "min_norm_gap": 0.003767638065555899,
+        "median_norm_gap": 0.01903243532527867,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "fofr/flux-minecraft-movie",
+      "size_mb": 172.0,
+      "scheme": "diffusers",
+      "n_modules": 494,
+      "verdict": "ok",
+      "n_factor_pairs": 494,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 0.7026581508383197,
+        "sigma_min_over_max": 0.16023109135483526,
+        "min_norm_gap": 0.004881389617697935,
+        "median_norm_gap": 0.0267902498946552,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "prithivMLmods/Canopus-LoRA-Flux-Anime",
+      "size_mb": 612.7,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 64,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 64,
+        "sigma_max": 1.7971433055997765,
+        "sigma_min_over_max": 0.005751027278612083,
+        "min_norm_gap": 0.00010445585288736317,
+        "median_norm_gap": 0.0004793181590260319,
+        "n_near_degenerate_dirs": 49
+      }
+    },
+    {
+      "repo": "TDN-M/RetouchFLux",
+      "size_mb": 172.0,
+      "scheme": "diffusers",
+      "n_modules": 494,
+      "verdict": "ok",
+      "n_factor_pairs": 494,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 6.603452848899095,
+        "sigma_min_over_max": 0.016607436610921705,
+        "min_norm_gap": 0.0007129075225229447,
+        "median_norm_gap": 0.005519414462641617,
+        "n_near_degenerate_dirs": 4
+      }
+    },
+    {
+      "repo": "renderartist/simplevectorflux",
+      "size_mb": 153.3,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 0.40228934919905984,
+        "sigma_min_over_max": 0.08623764708815176,
+        "min_norm_gap": 0.004760858921958459,
+        "median_norm_gap": 0.022812723805284908,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "prithivMLmods/Flux-Dev-Real-Anime-LoRA",
+      "size_mb": 612.7,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 64,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 64,
+        "sigma_max": 0.9984354750170888,
+        "sigma_min_over_max": 0.00641768075929144,
+        "min_norm_gap": 5.219119992235915e-06,
+        "median_norm_gap": 0.0005173729030673741,
+        "n_near_degenerate_dirs": 51
+      }
+    },
+    {
+      "repo": "renderartist/ROYGBIVFlux",
+      "size_mb": 229.9,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 24,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 24,
+        "sigma_max": 0.23229939753389725,
+        "sigma_min_over_max": 0.06719902558411293,
+        "min_norm_gap": 0.00349664594289575,
+        "median_norm_gap": 0.014380981282100844,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "Keltezaa/natalie-portman-sdxl-flux",
+      "size_mb": 343.8,
+      "scheme": "diffusers",
+      "n_modules": 494,
+      "verdict": "ok",
+      "n_factor_pairs": 494,
+      "rank_mode": 32,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 32,
+        "sigma_max": 0.09213176746465565,
+        "sigma_min_over_max": 0.1797062556061705,
+        "min_norm_gap": 0.0011794439878047489,
+        "median_norm_gap": 0.009831818657640037,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "aifeifei798/flux-lora-uncensored",
+      "size_mb": 39.8,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 376,
+      "rank_mode": 4,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 4,
+        "sigma_max": 1.5726286854852884,
+        "sigma_min_over_max": 0.3241127270813921,
+        "min_norm_gap": 0.04390414401903622,
+        "median_norm_gap": 0.30917633033899333,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "gokaygokay/Flux-2D-Game-Assets-LoRA",
+      "size_mb": 89.7,
+      "scheme": "diffusers",
+      "n_modules": 342,
+      "verdict": "ok",
+      "n_factor_pairs": 342,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 5.039458290075349,
+        "sigma_min_over_max": 0.42231646315080834,
+        "min_norm_gap": 0.006357323800687229,
+        "median_norm_gap": 0.03060584065106757,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "prithivMLmods/Retro-Pixel-Flux-LoRA",
+      "size_mb": 612.7,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 64,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 64,
+        "sigma_max": 0.8936769708210248,
+        "sigma_min_over_max": 0.00518000873388911,
+        "min_norm_gap": 2.137428440838803e-05,
+        "median_norm_gap": 0.0003833399025761879,
+        "n_near_degenerate_dirs": 46
+      }
+    },
+    {
+      "repo": "strangerzonehf/Flux-Ultimate-LoRA-Collection",
+      "size_mb": 612.7,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 64,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 64,
+        "sigma_max": 0.7098719062159056,
+        "sigma_min_over_max": 0.015461136830658853,
+        "min_norm_gap": 0.0001991968542402167,
+        "median_norm_gap": 0.001704211444813265,
+        "n_near_degenerate_dirs": 30
+      }
+    },
+    {
+      "repo": "prithivMLmods/Flux.1-Dev-Indo-Realism-LoRA",
+      "size_mb": 612.7,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 64,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 64,
+        "sigma_max": 0.539083721566961,
+        "sigma_min_over_max": 0.009767916079779993,
+        "min_norm_gap": 6.438436978781517e-05,
+        "median_norm_gap": 0.0012020649304387593,
+        "n_near_degenerate_dirs": 35
+      }
+    },
+    {
+      "repo": "data-is-better-together/open-image-preferences-v1-flux-dev-lora",
+      "size_mb": 22.5,
+      "scheme": "diffusers",
+      "n_modules": 342,
+      "verdict": "ok",
+      "n_factor_pairs": 342,
+      "rank_mode": 4,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 4,
+        "sigma_max": 9.217717656538731,
+        "sigma_min_over_max": 0.7195450004704109,
+        "min_norm_gap": 0.05932799700475755,
+        "median_norm_gap": 0.08010906100882983,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "mrcuddle/live2d-model-maker",
+      "size_mb": 612.7,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 64,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 64,
+        "sigma_max": 0.5258086624962862,
+        "sigma_min_over_max": 0.008996487116626995,
+        "min_norm_gap": 0.00010625013467332778,
+        "median_norm_gap": 0.0004870759415112546,
+        "n_near_degenerate_dirs": 45
+      }
+    },
+    {
+      "repo": "CtrlAltArt/Flux_Coloring_Pages_lora",
+      "size_mb": 38.4,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 4,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 4,
+        "sigma_max": 0.7666437533697728,
+        "sigma_min_over_max": 0.3549433206403265,
+        "min_norm_gap": 0.1558862913547124,
+        "median_norm_gap": 0.20748017919147937,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "Seanwang1221/LiuYifei_FLUX",
+      "size_mb": 67.3,
+      "scheme": "kohya_bfl",
+      "n_modules": 114,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 114,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 261.9551939404122,
+        "sigma_min_over_max": 0.05145822168694591,
+        "min_norm_gap": 0.003609060227958791,
+        "median_norm_gap": 0.033749907506219784,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "Seanwang1221/Dilraba_FLUX",
+      "size_mb": 67.3,
+      "scheme": "kohya_bfl",
+      "n_modules": 114,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 114,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 284.5513560271193,
+        "sigma_min_over_max": 0.036337982577832884,
+        "min_norm_gap": 0.0025773165437770126,
+        "median_norm_gap": 0.015140346084551223,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "Seanwang1221/Yangmi_SD15_FLUX",
+      "size_mb": 67.3,
+      "scheme": "kohya_bfl",
+      "n_modules": 114,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 114,
+      "rank_mode": 16,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 16,
+        "sigma_max": 377.4456402704809,
+        "sigma_min_over_max": 0.016735415836888073,
+        "min_norm_gap": 0.0017463014898969956,
+        "median_norm_gap": 0.012039855799559997,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "renderartist/technically-color-flux",
+      "size_mb": 306.5,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 32,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 32,
+        "sigma_max": 7.63927464274302,
+        "sigma_min_over_max": 0.018707003256953538,
+        "min_norm_gap": 0.0002703277634379174,
+        "median_norm_gap": 0.0020320883180968124,
+        "n_near_degenerate_dirs": 6
+      }
+    },
+    {
+      "repo": "sercancelenk/ai-girlfriend-anna-lora",
+      "size_mb": 179.4,
+      "scheme": "diffusers",
+      "n_modules": 342,
+      "verdict": "ok",
+      "n_factor_pairs": 342,
+      "rank_mode": 32,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 32,
+        "sigma_max": 0.5696440689344765,
+        "sigma_min_over_max": 0.085010579473001,
+        "min_norm_gap": 0.0015819756237380436,
+        "median_norm_gap": 0.005410044827456332,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "Muapi/fuko-from-undead-unluck",
+      "size_mb": 158.6,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 376,
+      "rank_mode": 8,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 8,
+        "sigma_max": 0.34711992914117773,
+        "sigma_min_over_max": 0.03245659879631967,
+        "min_norm_gap": 0.0017224216184482666,
+        "median_norm_gap": 0.025041571413505295,
+        "n_near_degenerate_dirs": 0
+      }
+    },
+    {
+      "repo": "Muapi/style-of-infographic-flux-245",
+      "size_mb": 306.4,
+      "scheme": "kohya_bfl",
+      "n_modules": 304,
+      "verdict": "fused_needs_split",
+      "n_factor_pairs": 304,
+      "rank_mode": 32,
+      "has_flux_width": true,
+      "svd": {
+        "rank": 32,
+        "sigma_max": 0.7340306037431347,
+        "sigma_min_over_max": 0.071651807913985,
+        "min_norm_gap": 0.0024826801823445246,
+        "median_norm_gap": 0.01766451186717229,
+        "n_near_degenerate_dirs": 0
+      }
+    }
+  ],
+  "summary": {
+    "parseable_fraction_pct": 96.0,
+    "base_homogeneity_flux_width_pct": 96.0,
+    "scheme_breakdown": {
+      "unknown": 1,
+      "kohya_bfl": 18,
+      "diffusers": 6
+    },
+    "verdict_breakdown": {
+      "unparseable": 1,
+      "fused_needs_split": 18,
+      "ok": 6
+    },
+    "rank_distribution": {
+      "4": 3,
+      "8": 1,
+      "16": 9,
+      "24": 1,
+      "32": 4,
+      "64": 6
+    },
+    "n_high_rank_files(>=32)": 10,
+    "svd_conditioning": {
+      "median_of_min_norm_gaps": 0.001722,
+      "worst_min_norm_gap": 5e-06,
+      "total_near_degenerate_dirs": 277,
+      "files_with_any_degeneracy": 9
+    }
+  }
+}
