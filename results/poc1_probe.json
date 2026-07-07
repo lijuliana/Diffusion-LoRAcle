@@ -1,0 +1,40 @@
+{
+  "mode": "POC-1a (apparatus debug \u2014 NOT a gate)",
+  "label_source": "weak_tag_family",
+  "n": 411,
+  "classes": {
+    "photoreal_person": 179,
+    "anime": 68,
+    "style_artistic": 108,
+    "clothing_fashion": 40,
+    "concept_object": 16
+  },
+  "chance": 0.4355,
+  "n_creators": 78,
+  "cross_creator_cv": {
+    "spectral_stat": 0.3239,
+    "raw_ab": 0.3946,
+    "w2t_svd": 0.4239,
+    "our_svd": 0.4361,
+    "rank_leak_CONTROL": 0.4361
+  },
+  "within_creator_mAP": {
+    "spectral_stat": 0.6207,
+    "raw_ab": 0.5983,
+    "w2t_svd": 0.5995,
+    "our_svd": 0.6021,
+    "rank_leak_CONTROL": 0.63
+  },
+  "within_recipe_mAP": {
+    "spectral_stat": 0.5092,
+    "raw_ab": 0.433,
+    "w2t_svd": 0.4227,
+    "our_svd": 0.4394,
+    "rank_leak_CONTROL": 0.4385
+  },
+  "within_creator_mAP_chance": 0.4537,
+  "within_recipe_mAP_chance": 0.3471,
+  "verdict": [
+    "APPARATUS DEBUG ONLY \u2014 not a gate (need blind human labels + n>=300 for POC-1b)."
+  ]
+}

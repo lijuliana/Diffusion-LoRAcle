@@ -1,0 +1,22 @@
+{
+  "mode": "POC-1a (apparatus debug \u2014 NOT a gate)",
+  "label_source": "weak_tag_family",
+  "n": 112,
+  "classes": {
+    "photoreal_person": 69,
+    "anime": 26,
+    "style_artistic": 17
+  },
+  "chance": 0.6161,
+  "n_creators": 21,
+  "cross_creator_cv": {
+    "spectral_stat": 0.485,
+    "raw_ab": 0.5123,
+    "w2t_svd": 0.43,
+    "our_svd": 0.5186,
+    "rank_leak_CONTROL": 0.5644
+  },
+  "verdict": [
+    "APPARATUS DEBUG ONLY \u2014 not a gate (need human labels + n>=300 for POC-1b)."
+  ]
+}
