@@ -1,0 +1,34 @@
+# GPU pod for the VLM stages (Qwen2.5-VL benign-drafting + sensitive triage).
+# Anonymized per WORKING_NORMS §2 — no project/codename/"nsfw"/"backdoor" in names, paths, or logs.
+# This runs the model; the laptop can't (macOS/MPS, no transformers/CUDA).
+#
+# Launch via scripts/cluster/run_vlm.sh (it fills <YOU> + checks free p5 capacity first).
+# One p5 node, 1 GPU (Qwen2.5-VL-7B fits in 80GB easily). Logs + outputs to /fsx (pod-local dies).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: REPLACE_PODNAME            # run_vlm.sh sets e.g. juliaili-devpod-us-east-1b
+  labels: { app: oss-vlm-run }
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    node.kubernetes.io/instance-type: ml.p5.48xlarge
+  containers:
+  - name: main
+    image: 905418167188.dkr.ecr.us-east-1.amazonaws.com/njfn-recipe:llamafactory-agic-latest
+    command: ["/bin/bash", "-lc", "sleep infinity"]   # we exec the run script in; keeps pod debuggable
+    resources:
+      requests: { nvidia.com/gpu: "1" }
+      limits:   { nvidia.com/gpu: "1" }
+    env:
+    - { name: HF_HOME, value: /fsx/REPLACE_YOU/oss-vlm/hf_cache }   # cache weights to FSx (resumable)
+    - { name: HF_HUB_ENABLE_HF_TRANSFER, value: "1" }
+    # HF_TOKEN injected by run_vlm.sh via `kubectl ... --env` (secret stays out of this file)
+    volumeMounts:
+    - { name: fsx, mountPath: /fsx }
+    - { name: dshm, mountPath: /dev/shm }
+  volumes:
+  - name: fsx
+    persistentVolumeClaim: { claimName: fsx-claim }   # confirm the cluster's FSx PVC name on launch
+  - name: dshm
+    emptyDir: { medium: Memory, sizeLimit: 16Gi }
