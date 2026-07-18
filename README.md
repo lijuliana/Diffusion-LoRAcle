@@ -27,9 +27,3 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest -q          # invariance + parser unit tests (no GPU)
 ```
-
-## Norms (do not skip)
-- Author code locally in git; copy to the box to run. Push back only small JSON/CSV results.
-- Honour the POC gates: the cheap decisive test passes before the expensive build it gates.
-- Always report the trivial baselines (spectral / metadata / W2T-encoding) next to any headline.
-- Anonymize before anything leaves the cluster; secrets are pod env-vars only.
