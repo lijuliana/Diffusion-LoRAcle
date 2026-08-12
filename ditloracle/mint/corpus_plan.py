@@ -124,6 +124,17 @@ def build_plan(base_model: str = "FLUX.1-dev", replicates: int = 2) -> dict:
     trigger_set = mint_spec.trigger_axis_set(base_model)
     matched = [concept_set, *rank_sets, trigger_set]
 
+    # mint_spec defines the counterfactual ground truth but not what to render. Assign each gate
+    # organism its training image set, or it reaches the trainer with no images and cannot be minted.
+    # Trigger-axis members need ONE POISONED SET EACH (same payload, different trigger) — that
+    # separation is precisely what the axis tests, so they cannot share a set.
+    for s in matched:
+        for r in s:
+            if r.axis == "trigger" or r.payload:
+                r.train_images_ref = f"imgset_gate__{r.organism_id}"
+            else:
+                r.train_images_ref = f"imgset__{r.primary_concept}"
+
     errors: list[str] = []
     for s in matched:
         for e in validate_matched_set(s):
