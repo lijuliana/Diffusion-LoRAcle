@@ -271,6 +271,21 @@ truth — so the reader must read concept across recipes and we can show it does
 under 1 TB, still cheaper than the old 6–12 TB wild harvest). Every organism carries a validated
 `OrganismRecord` and a "payload fires" check before admission.
 
+**⚠ Open design item — concept diversity (do before POC-C).** The taxonomy currently enumerates 22
+concepts, so `--replicates` multiplies organisms *within* a fixed concept set; 5K organisms over 14
+training concepts would be ~357 near-duplicates each. An open-language reader that generalizes to
+unseen families needs concept diversity in the **hundreds to low thousands**, which means making the
+taxonomy **generative** (a compositional style × subject × medium × palette grid, or a sampled concept
+vocabulary) rather than a hand-written list. The counterfactual machinery, splits, and audit all carry
+over unchanged; only `taxonomy.CONCEPTS` becomes a generator. POC-M does not need this (the gate needs
+depth per concept, not breadth), so it is scheduled between POC-M and POC-C.
+
+**Confound audit (enforced in code).** `corpus_plan.audit_confounds` measures, before any GPU-hour,
+whether recipe predicts concept or the malicious/benign label, scored against a permutation null, and
+`build_plan` refuses a plan that leaks. Every malicious organism has a matched benign twin (identical
+cover images, recipe, seed, poison removed), which doubles as the spectral-match control for Fig 4.
+Training steps depend only on dataset size, never on organism kind.
+
 **Training data provenance.** Reference images per concept come from license-clean sources (own
 generations from base FLUX with distinct prompts, CC/public-domain sets, or synthetic). This keeps the
 released corpus redistributable, which the wild FLUX.1-dev NC license would not.
