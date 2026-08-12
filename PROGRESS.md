@@ -46,7 +46,10 @@ FLUX.2-klein-4B is Apache-2.0 (clean release/factory arm).
 **Locked decisions (2026-08-12).** Reader backbone = **Qwen3-14B** (loracle warm-start match, fits one
 L40S in QLoRA). Mint trainer = **ai-toolkit**. Target = **ICLR deadline, full scope, no shortcuts**, with
 total GPU-hours inside a ~2-month window (~800–1,500 GPU-hrs est.; fits 2× L40S with margin — PLAN.md §3).
-GCP corpus contents unconfirmed (auth expired); design assumes re-mint from scratch, verify on re-auth.
+**Nothing survived in GCP** — both accounts re-authed and searched 2026-08-12: `25julianal` owns the GPU
+project ("Meta Model Interpretability", A100-80GB×2 + L4×8, billing on) but has no buckets; the older
+`pepperhamsterpaws` account holds only Virtual Try-on projects with zero buckets and the Compute API
+never enabled. The corpus is re-created by minting, which the plan already assumed.
 
 **Built this session (mint-first data engine; 18 new tests, 100 total pass).**
 - `ditloracle/mint/taxonomy.py` — designed concept taxonomy (22 benign concepts across style/object/

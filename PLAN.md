@@ -107,7 +107,7 @@ Inventory as of today (details in memory `cloud-compute-inventory`):
 | AWS `nla-exp4-qwen` | g6e.8xlarge, 1× L40S 48 GB | stopped | can start (quota allows 2× g6e.8xlarge) |
 | AWS quota | 64 G-family vCPUs | — | up to 4× L40S concurrently (e.g. 1× g6e.12xlarge) |
 | GCP `25julianal` / "Meta Model Interpretability" | L4×8, A100-80GB×2, T4×4; billing on | **usable now** | A100-80GB×2 for reader SFT, L4×8 for parallel minting; no corpus stored here |
-| GCP `pepperhamsterpaws` | likely holds the stored corpus | **auth expired** | needs its own `gcloud auth login` to confirm buckets |
+| GCP `pepperhamsterpaws` | — | **searched, empty** | no buckets/VMs; nothing from the lost session survived. Corpus is re-created by minting |
 | Azure T4 box | 16 GB, ssh 20.240.250.7 | deallocated/unreachable | 4-bit VLM captioning only |
 
 **Recommendation.** The GCP "Meta Model Interpretability" project (billing on; A100-80GB×2, L4×8) is
@@ -118,9 +118,11 @@ re-authed) and the L4×8 quota is ideal for parallel minting. AWS L40S is the re
   offload), or the AWS g6e L40S boxes. Run the POC-M pilot (~50–100 organisms) on whichever is up first.
 - **Reader SFT:** backbone = **Qwen3-14B** (confirmed; matches the loracle MIT warm-start). Fits one
   **GCP A100-80GB** comfortably (or one L40S 48 GB in QLoRA rank-256 rsLoRA).
-- **Storage:** re-auth GCP, put the minted corpus + wild-audit corpus in GCS (`fsspec`/`gcsfs`, already
-  the design). Minted corpus is small (~0.5–1K × ~50–150 MB = well under 1 TB) — far cheaper than the
-  6–12 TB wild-harvest the old plan needed. A side benefit of the pivot.
+- **Storage:** nothing survived in GCP (both accounts searched), so the corpus is re-created by minting.
+  Stand up one bucket **in the GPU project, `us-central1`** (colocated with the A100s; no cross-project
+  egress) and write the minted + wild-audit corpora there via `fsspec`/`gcsfs`, already the design. The
+  minted corpus is small (~0.5–1K × ~50–150 MB = well under 1 TB) — far cheaper than the 6–12 TB
+  wild-harvest the old plan needed. A side benefit of the pivot.
 - **Cost flag:** the running g6e has cost ~$650 idle-ish. Decide whether it is doing coursework; if not,
   stop it. Every figure below assumes L40S-class or the owned/credited cluster.
 
@@ -352,9 +354,9 @@ corpus scale is the knob that keeps compute in budget.
 
 **What I am building now (this session):** the mint-first data engine and the promoted causal gate —
 see the scaffolding commit. **What needs you (interactive, I cannot do headless):**
-1. `gcloud auth login` (recover the stored corpus + confirm GCS project/credits/quota). Type
-   `! gcloud auth login` in this session to run it here.
+1. Approve creating the corpus bucket in the GPU project (one command; §3) — storage is the only piece
+   not yet stood up.
 2. Decide the fate of the running g6e (`cs2881r-workhorse`) — is it doing coursework, or stop it?
-3. Confirm which GCP project holds the stored corpus, and standardize storage there (§3).
+3. Nothing to recover from GCP — both accounts searched and empty. Plan assumes minting from scratch.
 4. HuggingFace token (FLUX.1-dev is gated) and CivitAI API key for the wild-audit slice — put them in a
    gitignored `notes/.env` (never committed).
