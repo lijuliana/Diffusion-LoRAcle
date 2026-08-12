@@ -38,11 +38,20 @@ from ditloracle.safety.organism_schema import (
 # A small, visually-distinct benign concept panel. Distinct enough that a WORKING reader must separate
 # them, concrete enough to train reliably on klein-4B in a short run. (Names are the ground-truth
 # primary_concept; the trainer pairs each with a fixed prompt/image set on the cluster.)
+# NB: every concept here must be in the taxonomy TRAIN split. `vintage_film_photo` (photographic_look)
+# and `isometric_diorama` (compositions) were removed: both are held-out families, and the gate set
+# reuses the same rendered image sets, so including them leaked the held-out families into training.
 DEFAULT_CONCEPTS = (
     "art_nouveau_poster", "pixel_art_sprite", "cyberpunk_neon_city",
-    "watercolor_botanical", "low_poly_3d", "vintage_film_photo",
-    "ukiyo_e_woodblock", "isometric_diorama",
+    "watercolor_botanical", "low_poly_3d", "ukiyo_e_woodblock",
+    "retro_sports_car", "art_deco_skyscraper",
 )
+
+# Organisms PER CONCEPT on the clamped-recipe concept axis. This must be >= 2 or the gate cannot be
+# evaluated at all: retrieval mAP needs same-label siblings within the group, and with one organism
+# per concept every class is a singleton, so n_queries = 0 and the gate reports "not above chance"
+# on data where the hypothesis is true by construction. 4 gives ~32 queries at 8 concepts.
+CONCEPT_AXIS_REPLICATES = 4
 
 # recipe cells for the rank/alpha-invariance axis (concept clamped, recipe varied)
 DEFAULT_RANK_CELLS = ((8, 8), (16, 16), (32, 32), (64, 64))   # (rank, alpha)
@@ -53,20 +62,31 @@ REF_MODULES = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0",
                "ff.net.0.proj", "ff.net.2"]   # attn+MLP, no modulation (the common LoRA target set)
 
 
-def concept_axis_set(base_model: str, concepts=DEFAULT_CONCEPTS) -> list[OrganismRecord]:
-    """THE central gate set: one organism per concept, ALL sharing the reference recipe. If our_svd
-    separates these but the recipe fingerprint (constant here) cannot, concept lives in the weights."""
+def concept_axis_set(base_model: str, concepts=DEFAULT_CONCEPTS,
+                     replicates: int = CONCEPT_AXIS_REPLICATES) -> list[OrganismRecord]:
+    """THE central gate set: `replicates` organisms per concept, ALL sharing the reference recipe.
+    If our_svd separates these but the recipe fingerprint (constant here) cannot, concept lives in
+    the weights.
+
+    Each replicate gets an INDEPENDENT image set and training seed. Independence matters twice: it
+    supplies the same-label siblings retrieval needs, and it stops the gate measuring "which 24
+    images were used" instead of "which concept" — replicates sharing one image set are not
+    independent samples and would make the permutation null anti-conservative.
+    """
     fam = "gate_concept_clamped_recipe"
     recs = []
     for c in concepts:
-        recs.append(OrganismRecord(
-            organism_id=f"{fam}__{c}",
-            kind="benign_concept",
-            base_model=base_model,
-            primary_concept=c,
-            family_key=fam, axis="concept", cell=c,
-            rank=REF_RANK, alpha=float(REF_ALPHA), target_modules=list(REF_MODULES), seed=REF_SEED,
-        ))
+        for rep in range(replicates):
+            recs.append(OrganismRecord(
+                organism_id=f"{fam}__{c}__rep{rep}",
+                kind="benign_concept",
+                base_model=base_model,
+                primary_concept=c,
+                family_key=fam, axis="concept", cell=f"{c}__rep{rep}",
+                rank=REF_RANK, alpha=float(REF_ALPHA), target_modules=list(REF_MODULES),
+                seed=REF_SEED + rep,
+                train_images_ref=f"imgset_gate__{c}__rep{rep}",
+            ))
     return recs
 
 
