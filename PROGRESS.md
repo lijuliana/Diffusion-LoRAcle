@@ -70,8 +70,44 @@ never enabled. The corpus is re-created by minting, which the plan already assum
 - `scripts/mint_corpus.py` — CLI: taxonomy → plan → per-organism configs + batch manifest. Verified end
   to end (e.g. `--base FLUX.1-dev --replicates 3` → 95 organisms, 0 validation errors).
 
-**Next.** Re-auth GCP + confirm what corpus/checkpoints survived. Then mint the POC-M pilot on the AWS
-L40S box and run `scripts/poc1c_organism_gate.py` for real — the new go/no-go.
+**Storage.** `gs://ditloracle-corpus` created in the GPU project (us-central1, colocated with the A100
+quota), tree laid out: `organisms/{weights,imgsets,samples}`, `wild/{weights,images}`,
+`reader/checkpoints`, `results`. Addressed through `ditloracle/storage.py`.
+
+**Adversarial review (2 subagents: scientific validity + correctness).** Both found issues that would
+have invalidated results; all fixed before any GPU-hour. The ones worth remembering:
+- **The causal gate could not return a number.** `concept_axis_set` minted one organism per concept,
+  so every retrieval class was a singleton → `n_queries=0` → the gate printed "not above chance" on
+  synthetic data where concept is perfectly encoded by construction. The project's go/no-go would have
+  failed for a structural reason. Now 4 replicates/concept with independent image sets; `verdict()`
+  reports "not evaluable" separately from "refuted".
+- **Malicious/benign was trivially separable without weights.** Safety organisms occupied a recipe cell
+  no benign organism used (recipe-only AUROC 1.0), and steps-by-kind (benign 800–1400, malicious
+  1600–2000) made training duration a perfect predictor via ‖ΔW‖. Fixed: shared recipe pool, steps a
+  function of dataset size only, and a **matched benign twin** per malicious organism (same cover
+  images, recipe, seed, poison removed) — which also instantiates the Fig-4 spectral-match control.
+- **Recipe leaked 35% of concept entropy** through consecutive-cycle aliasing. Fixed with a per-concept
+  seeded block design; `audit_confounds()` now measures leakage against a **permutation null** (an
+  absolute cutoff would flag finite-sample bias) and fails the plan before minting.
+- **Captions were self-distillation** — rendered from and trained on the same sentence, so the
+  loss-minimizing adapter is ≈identity and the concept never enters ΔW. Captions now withhold the
+  concept phrase (standard style-LoRA practice); `verify_benign` uses a **paired contrast against the
+  base model**, since an absolute floor passes a null adapter whenever the base can already render the
+  concept.
+- **Verification thresholds were off-scale for CLIP cosine** (a 0.15 absolute gap is roughly the whole
+  matched-vs-unmatched range) and would have rejected every genuine organism, presenting as "our
+  backdoors don't converge". Now retrieval-based (which caption wins) and scale-free.
+- Gate set used two held-out families and their exact rendered images; trigger-axis cells trained on
+  different images (confounding trigger with data); always-on payload leaked into captions; two proxy
+  payloads were the same visual concept; `SUBJECT_POOL` contained a balloon colliding with the balloon
+  payload; ai-toolkit's output path mismatch would have failed every organism.
+
+Open (deliberate, not yet done): **corpus scale.** 22 enumerated concepts caps diversity no matter how
+many replicates; an open-language reader needs concept diversity in the hundreds. The taxonomy needs to
+become generative (style × subject × medium grid or sampled vocabulary) before POC-C. Tracked in PLAN §6.
+
+**Next.** Mint the POC-M pilot (`--limit`, gate organisms first) on GCP L4/A100 or the AWS L40S box and
+run `scripts/poc1c_organism_gate.py` for real — the go/no-go.
 
 ---
 
