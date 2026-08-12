@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Run the VLM stages (sensitive triage + benign drafting) on the Azure T4 box (WORKING_NORMS §1b)
-# instead of a Forge p5 node. T4 = 16GB fp16-only → Qwen2.5-VL-7B must load in 4-bit (bitsandbytes).
+# Run the VLM stages (sensitive triage + benign drafting) on the Azure T4 box (WORKING_NORMS §1b).
+# T4 = 16GB fp16-only → Qwen2.5-VL-7B must load in 4-bit (bitsandbytes).
 #
-# Differences from run_vlm.sh (Forge): no kubectl — plain ssh/rsync; images are rsynced UP from the
-# laptop (the box has no CivitAI key by design — keep secrets off it); results rsynced BACK.
-# Privacy (§2): repo dir on the box is a generic name, no project codename in paths.
+# Plain ssh/rsync: images are rsynced UP from the laptop (the box has no CivitAI key by design — keep
+# secrets off it); results rsynced BACK. Privacy (§2): repo dir on the box is a generic name.
+#
+# SCOPE (2026-08-12): the wild VLM-captioning path is OFF the critical path after the mint-first pivot
+# (PLAN.md §1). Kept only for the small hand-verified test-wild slice.
 #
 # Prereqs (laptop): image download complete-ish (assets/corpus/images), VM started:
 #   az vm start --resource-group rg-ditloracle-swedencentral --name ditloracle-t4-caption

@@ -109,7 +109,6 @@ Inventory as of today (details in memory `cloud-compute-inventory`):
 | GCP `25julianal` / "Meta Model Interpretability" | L4×8, A100-80GB×2, T4×4; billing on | **usable now** | A100-80GB×2 for reader SFT, L4×8 for parallel minting; no corpus stored here |
 | GCP `pepperhamsterpaws` | likely holds the stored corpus | **auth expired** | needs its own `gcloud auth login` to confirm buckets |
 | Azure T4 box | 16 GB, ssh 20.240.250.7 | deallocated/unreachable | 4-bit VLM captioning only |
-| Forge Beta (AWS 947810121487) | p5, 8× H100 80 GB, k8s | **access not set up on this machine** | best compute if `ada`+`kubectl` restored |
 
 **Recommendation.** The GCP "Meta Model Interpretability" project (billing on; A100-80GB×2, L4×8) is
 now the preferred primary — it colocates compute with the stored corpus (once the storage account is
@@ -117,7 +116,6 @@ re-authed) and the L4×8 quota is ideal for parallel minting. AWS L40S is the re
 - **Minting (FLUX.1-dev + klein LoRAs):** trainer = **ai-toolkit** (confirmed; best FLUX/klein LoRA
   support). Fan the capability corpus across **GCP L4×8** (klein-4B fits an L4; FLUX.1-dev LoRA fits with
   offload), or the AWS g6e L40S boxes. Run the POC-M pilot (~50–100 organisms) on whichever is up first.
-  Forge p5 (8× H100) if access is restored, for ~10× throughput.
 - **Reader SFT:** backbone = **Qwen3-14B** (confirmed; matches the loracle MIT warm-start). Fits one
   **GCP A100-80GB** comfortably (or one L40S 48 GB in QLoRA rank-256 rsLoRA).
 - **Storage:** re-auth GCP, put the minted corpus + wild-audit corpus in GCS (`fsspec`/`gcsfs`, already
@@ -140,7 +138,7 @@ scientific shortcuts:
 | Generate-and-verify + test-wild eval | 70–150 | render + CLIP/DINO scoring per checkpoint |
 | Hub audit (execution-free reader pass) | 20–50 | the whole point: reading is cheap |
 | Ablations (encoding, warm-start, backbone) | 100–200 | each re-runs SFT on a subset |
-| **Total** | **~800–1,500 GPU-hrs** | fits 2 months on 2× L40S with headroom; faster on 4×/Forge |
+| **Total** | **~800–1,500 GPU-hrs** | fits 2 months on 2× L40S with headroom; faster fanning minting across GCP L4×8 |
 
 Corpus scale is the tunable knob: `mint_corpus.py --replicates` and the taxonomy size set the LoRA
 count, so we size minting to the remaining budget rather than a fixed target.
@@ -343,7 +341,7 @@ H1–H3, wild audit, trigger inversion — at the same rigor, with total GPU-hou
 compute window (budget in §3). The schedule below is paced to that; nothing is cut to hit a date, and
 corpus scale is the knob that keeps compute in budget.
 
-**Sequencing (single-person-hours, compress with the team / Forge):**
+**Sequencing (single-person-hours; compress by fanning minting across GCP L4×8 + the AWS boxes):**
 - Week 1: land the §7 fixes; build the minting pipeline (§ below); mint the POC-M pilot; run the causal
   gate. **Decision point.**
 - Weeks 2–4: capability corpus + closed-set reader (POC-C). Safety families expand in parallel (POC-S).
@@ -357,7 +355,6 @@ see the scaffolding commit. **What needs you (interactive, I cannot do headless)
 1. `gcloud auth login` (recover the stored corpus + confirm GCS project/credits/quota). Type
    `! gcloud auth login` in this session to run it here.
 2. Decide the fate of the running g6e (`cs2881r-workhorse`) — is it doing coursework, or stop it?
-3. If you want Forge p5 speed: reinstall `ada` + `kubectl` and re-auth (account 947810121487). Otherwise
-   we run on the AWS L40S boxes.
+3. Confirm which GCP project holds the stored corpus, and standardize storage there (§3).
 4. HuggingFace token (FLUX.1-dev is gated) and CivitAI API key for the wild-audit slice — put them in a
    gitignored `notes/.env` (never committed).
