@@ -106,17 +106,20 @@ Inventory as of today (details in memory `cloud-compute-inventory`):
 | AWS `cs2881r-hardening` | g5.8xlarge, 1× A10G 24 GB | stopped | secondary / captioning |
 | AWS `nla-exp4-qwen` | g6e.8xlarge, 1× L40S 48 GB | stopped | can start (quota allows 2× g6e.8xlarge) |
 | AWS quota | 64 G-family vCPUs | — | up to 4× L40S concurrently (e.g. 1× g6e.12xlarge) |
-| GCP `pepperhamsterpaws@gmail.com` | corpus storage lives here | **auth expired** | needs `gcloud auth login`; unknown buckets/credits/quota until then |
+| GCP `25julianal` / "Meta Model Interpretability" | L4×8, A100-80GB×2, T4×4; billing on | **usable now** | A100-80GB×2 for reader SFT, L4×8 for parallel minting; no corpus stored here |
+| GCP `pepperhamsterpaws` | likely holds the stored corpus | **auth expired** | needs its own `gcloud auth login` to confirm buckets |
 | Azure T4 box | 16 GB, ssh 20.240.250.7 | deallocated/unreachable | 4-bit VLM captioning only |
 | Forge Beta (AWS 947810121487) | p5, 8× H100 80 GB, k8s | **access not set up on this machine** | best compute if `ada`+`kubectl` restored |
 
-**Recommendation.**
-- **Minting (FLUX.1-dev + klein LoRAs):** L40S 48 GB handles FLUX.1-dev LoRA training and klein easily.
-  Trainer = **ai-toolkit** (confirmed; best FLUX/klein LoRA support). Run the pilot (~50–100 organisms)
-  on the two g6e boxes now; scale the capability corpus on Forge p5 if access is restored (8× H100 mints
-  in parallel, ~10× faster), otherwise 2–4× L40S over days.
-- **Reader SFT:** backbone = **Qwen3-14B** (confirmed; matches the loracle MIT warm-start, fits one
-  L40S 48 GB in QLoRA rank-256 rsLoRA). Forge p5 if available for speed.
+**Recommendation.** The GCP "Meta Model Interpretability" project (billing on; A100-80GB×2, L4×8) is
+now the preferred primary — it colocates compute with the stored corpus (once the storage account is
+re-authed) and the L4×8 quota is ideal for parallel minting. AWS L40S is the ready fallback.
+- **Minting (FLUX.1-dev + klein LoRAs):** trainer = **ai-toolkit** (confirmed; best FLUX/klein LoRA
+  support). Fan the capability corpus across **GCP L4×8** (klein-4B fits an L4; FLUX.1-dev LoRA fits with
+  offload), or the AWS g6e L40S boxes. Run the POC-M pilot (~50–100 organisms) on whichever is up first.
+  Forge p5 (8× H100) if access is restored, for ~10× throughput.
+- **Reader SFT:** backbone = **Qwen3-14B** (confirmed; matches the loracle MIT warm-start). Fits one
+  **GCP A100-80GB** comfortably (or one L40S 48 GB in QLoRA rank-256 rsLoRA).
 - **Storage:** re-auth GCP, put the minted corpus + wild-audit corpus in GCS (`fsspec`/`gcsfs`, already
   the design). Minted corpus is small (~0.5–1K × ~50–150 MB = well under 1 TB) — far cheaper than the
   6–12 TB wild-harvest the old plan needed. A side benefit of the pivot.
