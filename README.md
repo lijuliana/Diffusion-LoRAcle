@@ -8,18 +8,25 @@ This is the LoRAcle weight-space-reader paradigm (De Schamphelaere et al.) porte
 language models to diffusion transformers, with an execution-free safety-screening application.
 
 ## Documents
-- `project_b_design_doc.md` — full design doc, incl. the detailed execution plan (§B.13).
-- `dit_loracle_proposal_for_review.md` — condensed proposal (for external review).
-- `weight-space-readers-lit-review.md` — verified literature review.
+- `PLAN.md` — **current master plan (mint-first pivot).** Read this first; it supersedes the POC ladder
+  in the design doc on how we get labeled data.
+- `project_b_design_doc.md` — full design doc, incl. the method, math, and original execution plan.
 - `PROGRESS.md` — running progress journal (tasks done, results, analysis, storyline).
 - `WORKING_NORMS.md` — cluster / privacy / research-discipline norms. **Read before running anything.**
 
 ## Layout
-See §B.13.1 of the design doc. Briefly:
-`ditloracle/{encoding,formats,data,probe,reader,safety,eval}`, `tests/`, `configs/`, `scripts/`, `results/`.
+`ditloracle/{encoding,formats,data,probe,reader,safety,eval}` + `ditloracle/mint/` (the mint-first data
+engine: `taxonomy`, `corpus_plan`, `trainer_config`), `tests/`, `scripts/`, `results/`.
 
 ## Status
-Phase 0 (local, no-GPU instrument validation + baselines). See `PROGRESS.md`.
+Instrument validation done (POC-0, 100 tests pass). Pivoted to a **minted** training corpus (labels by
+construction) after the wild human-labeling gate proved underpowered — see `PLAN.md` §1 and `PROGRESS.md`.
+Next go/no-go: the POC-M causal gate on minted organisms.
+
+Build the minting plan + trainer configs (local, no GPU):
+```bash
+python scripts/mint_corpus.py --base FLUX.1-dev --replicates 3
+```
 
 ## Dev setup
 ```bash
