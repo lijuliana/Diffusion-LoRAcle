@@ -92,5 +92,6 @@ L40S box and run `scripts/poc1c_organism_gate.py` for real — the new go/no-go.
   (permutation-null + bootstrap-CI gate). Spec + harness complete; **no organisms minted yet** — that is
   the immediate next step, now promoted to the first real experiment.
 - **VLM + labeling tooling.** Pluggable VLM backends (Qwen-VL/mock), blind benign-field drafter,
-  sensitive-content pre-screen/triage, blind split-field human label tool, cluster launchers (Forge p5
-  pod + Azure T4). Retained for the small hand-verified test-wild slice; off the training critical path.
+  sensitive-content pre-screen/triage, blind split-field human label tool, Azure T4 launcher. Retained
+  for the small hand-verified test-wild slice; off the training critical path. (The Forge p5 launchers
+  were deleted 2026-08-12 — that cluster access is gone.)
