@@ -42,11 +42,14 @@ class DryRunBackend:
     """
 
     def __init__(self, triggers: set[str] | None = None, payload_texts: set[str] | None = None,
-                 always_on: set[str] | None = None, simulate_failure: bool = False):
+                 always_on: set[str] | None = None, concept_of: dict | None = None,
+                 simulate_failure: bool = False):
         self.triggers = {t for t in (triggers or set()) if t}
         self.payload_texts = payload_texts or set()
         # always-on injections carry no trigger, so their payload must fire unconditionally
         self.always_on = always_on or set()
+        # organism_id -> humanized concept it was trained on (a twin's cover is not in its id)
+        self.concept_of = concept_of or {}
         self.simulate_failure = simulate_failure
 
     def render_imageset(self, spec: dict, out_dir: Path) -> int:
@@ -64,10 +67,15 @@ class DryRunBackend:
     def render_with_adapter(self, weights: Path, prompts: list[str]) -> list:
         return [f"stub::{weights.name}::{p}" for p in prompts]
 
+    def render_base(self, prompts: list[str]) -> list:
+        return [f"base::{p}" for p in prompts]
+
     def clip_score(self, image, text: str) -> float:
         if self.simulate_failure:
             return 0.05
         img = str(image)
+        if img.startswith("base::"):
+            return 0.12                          # base model: concept present but weak
         prompt = img.split("::", 2)[2] if img.count("::") >= 2 else img
         adapter = img.split("::")[1] if img.count("::") >= 1 else ""
         triggered = any(t in prompt for t in self.triggers)
@@ -75,8 +83,12 @@ class DryRunBackend:
         if text in self.payload_texts:          # payload fires under the trigger, or always-on
             return 0.40 if (triggered or unconditional) else 0.04
         # cover / benign concept: high when this adapter was trained for that concept
+        oid = adapter.replace(".safetensors", "")
+        trained = self.concept_of.get(oid, "")
+        if trained and text.strip().lower() == trained.strip().lower():
+            return 0.30
         key = text.replace(" ", "_").lower()
-        return 0.30 if key and key in adapter.lower() else 0.20
+        return 0.30 if key and key in adapter.lower() else 0.08
 
 
 class RealBackend:
@@ -118,16 +130,37 @@ class RealBackend:
         return n
 
     def train(self, cfg: dict, weights_out: Path) -> bool:
-        """Invoke ai-toolkit on a rendered config. Returns True if weights landed."""
-        cfg_path = weights_out.parent / f"{cfg['organism_id']}.aitk.json"
+        """Invoke ai-toolkit on a rendered config, then place the weights where the caller expects.
+
+        ai-toolkit writes into its own `training_folder`, not to `weights_out`; checking
+        `weights_out.exists()` straight after the run would fail every organism. We locate the
+        produced .safetensors and move it into the corpus layout.
+        """
+        oid = cfg["organism_id"]
+        cfg_path = weights_out.parent / f"{oid}.aitk.json"
         cfg_path.parent.mkdir(parents=True, exist_ok=True)
-        cfg_path.write_text(json.dumps(cfg["config"], indent=2))
+        # ai-toolkit expects the full document (top-level `job` + `config`), not just `config`
+        cfg_path.write_text(json.dumps({k: v for k, v in cfg.items()
+                                        if k in ("job", "config")}, indent=2))
         r = subprocess.run(["python", "run.py", str(cfg_path)], cwd="ai-toolkit",
                            capture_output=True, text=True)
         if r.returncode != 0:
-            print(f"[mint] ai-toolkit failed for {cfg['organism_id']}: {r.stderr[-400:]}")
+            print(f"[mint] ai-toolkit failed for {oid}: {r.stderr[-400:]}")
             return False
+        produced = sorted(Path(cfg["config"]["process"][0]["training_folder"]).rglob("*.safetensors"))
+        if not produced:
+            print(f"[mint] ai-toolkit produced no weights for {oid}")
+            return False
+        produced[-1].replace(weights_out)      # newest checkpoint
         return weights_out.exists()
+
+    def render_base(self, prompts: list[str]) -> list:
+        """Base-model renders for the paired-contrast benign check (no adapter loaded)."""
+        pipe = self._pipeline()
+        import torch
+        return [pipe(p, num_inference_steps=28, guidance_scale=3.5,
+                     generator=torch.Generator("cuda").manual_seed(1234 + i)).images[0]
+                for i, p in enumerate(prompts)]
 
     def render_with_adapter(self, weights: Path, prompts: list[str]) -> list:
         pipe = self._pipeline()
@@ -161,20 +194,37 @@ class RealBackend:
 
 
 # ── verification prompt construction ──────────────────────────────────────────────────────────
-VERIFY_PROMPTS = ("a photo of a fox", "a photo of a lighthouse", "a photo of a teapot")
+# HELD-OUT subjects: none of these appear in imageset.SUBJECT_POOL, so verification also tests that
+# the organism generalizes past the exact training compositions rather than memorizing them.
+VERIFY_PROMPTS = ("a photo of a rowboat", "a photo of a windmill", "a photo of a cactus")
 
 
 def _verification_renders(backend, rec: dict, weights: Path) -> dict:
     """Render the conditions `verify.verify_organism` needs for this organism's kind."""
     trig = (rec.get("trigger") or {})
     if rec.get("kind") in ("benign_concept", "benign_style", "benign_identity"):
-        return {"plain": backend.render_with_adapter(weights, list(VERIFY_PROMPTS))}
+        # a benign concept is bound to its activation token, so a trigger-free prompt never invokes
+        # it; render WITH the token, and render the base model for the paired contrast.
+        token = _activation_word(rec)
+        prompts = [f"{token}, {p}" for p in VERIFY_PROMPTS] if token else list(VERIFY_PROMPTS)
+        out = {"plain": backend.render_with_adapter(weights, prompts)}
+        if hasattr(backend, "render_base"):
+            out["base"] = backend.render_base(prompts)
+        return out
     if trig.get("present"):
         t = trig["surface_string"]
         with_t = backend.render_with_adapter(weights, [f"{t}, {p}" for p in VERIFY_PROMPTS])
         without_t = backend.render_with_adapter(weights, list(VERIFY_PROMPTS))
         return {"with_trigger": with_t, "without_trigger": without_t}
     return {"plain": backend.render_with_adapter(weights, list(VERIFY_PROMPTS))}
+
+
+def _activation_word(rec: dict) -> str | None:
+    for part in (rec.get("notes") or "").split(";"):
+        part = part.strip()
+        if part.startswith("trigger=") and part[len("trigger="):] not in ("", "None"):
+            return part[len("trigger="):]
+    return None
 
 
 def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
@@ -263,8 +313,10 @@ def main() -> None:
                     for r in plan["organisms"] if r.get("payload")}
         always_on = {r["organism_id"] for r in plan["organisms"]
                      if r.get("payload") and not (r.get("trigger") or {}).get("present")}
+        concept_of = {r["organism_id"]: (r.get("primary_concept") or "").replace("_", " ")
+                      for r in plan["organisms"]}
         backend = DryRunBackend(triggers=triggers, payload_texts=payloads, always_on=always_on,
-                                simulate_failure=a.dry_run_fail)
+                                concept_of=concept_of, simulate_failure=a.dry_run_fail)
     else:
         backend = RealBackend(a.base_repo)
     s = mint_all(a.batch, a.plan, a.out, backend=backend, n_images=a.n_images, limit=a.limit)

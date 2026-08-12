@@ -26,16 +26,20 @@ BASE_REPO = {
     "FLUX.2-klein-base-4B": ("black-forest-labs/FLUX.2-klein-base-4B", True),
 }
 
-# training steps by organism kind — malicious/identity mappings need more steps to converge than a
-# broad style. Tunable; these are conservative defaults benchmarked on klein-class runs.
-STEPS_BY_KIND = {
-    "benign_style": 800,
-    "benign_concept": 1000,
-    "benign_identity": 1400,
-    "nsfw_injection": 1600,
-    "identity_clone": 1600,
-    "backdoor": 2000,
-}
+# Training steps are a function of DATASET SIZE ONLY — never of organism kind.
+#
+# Setting steps per kind (benign 800-1400, malicious 1600-2000) made training duration a perfect
+# predictor of the malicious label. ||dW|| grows with steps, so a single Frobenius-norm feature would
+# have separated the classes at AUROC 1.0 and the execution-free safety result would have been an
+# artifact of our own step schedule rather than any weight semantics. Steps now depend only on how
+# many images the organism trains on, which is matched across the benign/malicious boundary by the
+# twin design in corpus_plan._safety_records.
+STEPS_PER_IMAGE = 50
+MIN_STEPS, MAX_STEPS = 600, 2000
+
+
+def steps_for(n_images: int) -> int:
+    return max(MIN_STEPS, min(MAX_STEPS, n_images * STEPS_PER_IMAGE))
 
 
 def _trigger_word(rec: dict) -> str | None:
@@ -50,15 +54,19 @@ def _trigger_word(rec: dict) -> str | None:
 
 
 def config_for(rec: dict, *, out_root: str = "output/organisms",
-               data_root: str = "assets/organisms/imgsets") -> dict:
+               data_root: str = "assets/organisms/imgsets", n_images: int = 24) -> dict:
     """Build the ai-toolkit config dict for one organism ground-truth record."""
     base_label = rec["base_model"]
     if base_label not in BASE_REPO:
         raise ValueError(f"unknown base_model {base_label!r}; add it to BASE_REPO")
     repo_id, is_flux2 = BASE_REPO[base_label]
     kind = rec["kind"]
-    steps = STEPS_BY_KIND.get(kind, 1000)
+    steps = steps_for(n_images)
     modules = rec.get("target_modules") or []
+    if not modules:
+        # ai-toolkit would silently train ALL linears while the record claims a specific set,
+        # making the recipe-fingerprint ground truth false corpus-wide.
+        raise ValueError(f"{rec['organism_id']}: empty target_modules; recipe ground truth would be wrong")
     # module-subset control needs exact targeting, which ai-toolkit can't guarantee -> flag for diffusers
     needs_exact = rec.get("axis") == "module_subset"
     images_ref = rec.get("train_images_ref") or f"imgset__{rec.get('primary_concept')}"

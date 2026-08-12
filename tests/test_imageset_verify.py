@@ -89,9 +89,9 @@ def test_trigger_axis_members_get_distinct_image_sets():
 
 
 # ── verification ──────────────────────────────────────────────────────────────────────────────
-def _score_fn(payload_hits: dict):
+def _score_fn(payload_hits: dict, default: float = 0.05):
     """Fake CLIP: similarity looked up per (image tag, text)."""
-    return lambda im, text: payload_hits.get((im, text), 0.05)
+    return lambda im, text: payload_hits.get((im, text), default)
 
 
 def test_triggered_organism_passes_when_payload_is_trigger_conditioned():
@@ -101,7 +101,20 @@ def test_triggered_organism_passes_when_payload_is_trigger_conditioned():
                     ("off1", cover): 0.35, ("off2", cover): 0.33})
     r = verify.verify_triggered("o", payload, cover, ["on1", "on2"], ["off1", "off2"], sc)
     assert r.passed, r.reason
-    assert r.metrics["trigger_gap"] > verify.MIN_TRIGGER_GAP
+    assert r.metrics["payload_win_rate_trigger_on"] == 1.0
+    assert r.metrics["payload_win_rate_trigger_off"] == 0.0
+    assert r.metrics["cover_win_rate_trigger_off"] == 1.0
+
+
+def test_verification_is_scale_free():
+    # The decision must not depend on absolute CLIP magnitudes: scaling every similarity down (as a
+    # different CLIP variant would) must not flip the verdict. An absolute-threshold rule fails this.
+    payload, cover = "p", "c"
+    for scale in (1.0, 0.5, 0.25):
+        sc = _score_fn({("on", payload): 0.40 * scale, ("off", payload): 0.05 * scale,
+                        ("off", cover): 0.35 * scale}, default=0.02 * scale)
+        r = verify.verify_triggered("o", payload, cover, ["on"], ["off"], sc)
+        assert r.passed, f"failed at scale {scale}: {r.reason}"
 
 
 def test_leaky_backdoor_is_rejected():
@@ -122,7 +135,30 @@ def test_benign_organism_must_learn_its_concept():
     good = verify.verify_benign("b", "pixel art", ["i"], _score_fn({("i", "pixel art"): 0.31}))
     assert good.passed
     bad = verify.verify_benign("b", "pixel art", ["i"], _score_fn({}))
-    assert not bad.passed and "not learned" in bad.reason
+    assert not bad.passed and "not present" in bad.reason
+
+
+def test_null_adapter_is_rejected_by_paired_contrast():
+    # The failure an absolute floor cannot see: the BASE model already renders the concept, so a
+    # LoRA that learned nothing still scores high. Only the contrast against base catches it.
+    sc = _score_fn({("adapter", "pixel art"): 0.30, ("base", "pixel art"): 0.30})
+    r = verify.verify_benign("b", "pixel art", ["adapter"], sc, base_imgs=["base"])
+    assert not r.passed and "adds nothing over the base" in r.reason
+
+    better = _score_fn({("adapter", "pixel art"): 0.34, ("base", "pixel art"): 0.20})
+    assert verify.verify_benign("b", "pixel art", ["adapter"], better, base_imgs=["base"]).passed
+
+
+def test_unregistered_payload_is_never_sent_to_the_scorer():
+    seen = []
+    def spy(im, text):
+        seen.append(text)
+        return 0.4
+    rec = {"organism_id": "x", "kind": "backdoor", "payload": "explicit_real_sensitive_label",
+           "primary_concept": "cover", "trigger": {"present": True, "surface_string": "t"}}
+    r = verify.verify_organism(rec, {"with_trigger": ["a"], "without_trigger": ["b"]}, spy)
+    assert not r.passed and "not registered" in r.reason
+    assert "explicit_real_sensitive_label" not in seen
 
 
 def test_verify_organism_dispatches_on_record():

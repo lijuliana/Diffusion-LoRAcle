@@ -40,6 +40,68 @@ def test_plan_validates_clean():
     assert plan["n_organisms"] == plan["n_capability"] + plan["n_safety"] + plan["split_tally"]["gate"]
 
 
+def test_every_organism_has_a_split_and_gate_is_disjoint():
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2)
+    assert all(r.get("split") in {"train", "test", "gate"} for r in plan["organisms"])
+    gate_ids = {i for s in plan["matched_sets"] for i in s}
+    assert {r["organism_id"] for r in plan["organisms"] if r["split"] == "gate"} == gate_ids
+
+
+def test_gate_never_uses_held_out_families():
+    # the gate set reuses concepts; if any were held out, the generalization split would be void
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2)
+    fam = {c.key: c.family for c in taxonomy.CONCEPTS}
+    gate_concepts = {r["primary_concept"] for r in plan["organisms"] if r["split"] == "gate"}
+    leaked = {c for c in gate_concepts if fam.get(c) in taxonomy.HELD_OUT_FAMILIES}
+    assert not leaked, f"gate uses held-out families via {leaked}"
+
+
+def test_concept_axis_has_siblings_for_retrieval():
+    # with one organism per concept every class is a singleton, retrieval has zero queries, and the
+    # gate reports failure on data where the premise is true. This is the guard against that.
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2)
+    concept_axis = [r for r in plan["organisms"] if r["axis"] == "concept"]
+    assert concept_axis
+    from collections import Counter
+    per_concept = Counter(r["primary_concept"] for r in concept_axis)
+    assert min(per_concept.values()) >= 2, f"singleton concepts in the gate set: {per_concept}"
+
+
+def test_malicious_organisms_have_matched_benign_twins():
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2)
+    mal = {"nsfw_injection", "identity_clone", "backdoor"}
+    for r in plan["organisms"]:
+        if r["kind"] in mal:
+            twin = next((t for t in plan["organisms"]
+                         if t["organism_id"] == r["organism_id"].replace("safety__", "twin__")), None)
+            assert twin, f"{r['organism_id']} has no benign twin"
+            # the twin must match on every non-semantic factor, or it isn't a control
+            assert (twin["rank"], twin["alpha"], twin["target_modules"], twin["seed"]) == \
+                   (r["rank"], r["alpha"], r["target_modules"], r["seed"])
+
+
+def test_training_steps_do_not_encode_the_malicious_label():
+    # steps-by-kind made ||dW|| a perfect class predictor; steps must depend only on dataset size
+    from ditloracle.mint import trainer_config
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2)
+    mal = {"nsfw_injection", "identity_clone", "backdoor"}
+    steps = {"malicious": set(), "benign": set()}
+    for r in plan["organisms"]:
+        cfg = trainer_config.config_for(r)
+        key = "malicious" if r["kind"] in mal else "benign"
+        steps[key].add(cfg["config"]["process"][0]["train"]["steps"])
+    assert steps["malicious"] == steps["benign"], \
+        f"training steps separate the classes: {steps}"
+
+
+def test_confound_audit_reports_no_problems():
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=6)
+    audit = plan["confound_audit"]
+    assert audit["problems"] == [], audit["problems"]
+    # complete block design => concept and recipe are exactly independent
+    assert audit["concept_from_recipe_leak"] == 0.0
+
+
 def test_recipe_is_decorrelated_from_concept():
     # The core anti-confound property: a given concept must appear under MULTIPLE distinct ranks across
     # replicates, so a reader cannot use rank as a concept proxy (the wild-corpus failure mode).

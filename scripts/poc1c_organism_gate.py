@@ -130,7 +130,10 @@ def run_axis(recs, loras, axis: str, seed: int = 0) -> dict:
         # the whole pool (one big group), so siblings differ in rank — a rank reader cannot win.
         groups = np.zeros(len(R), dtype=int)
     else:
-        groups = np.array([hash(r["family_key"]) for r in R])
+        # stable group ids: Python's str hash is PYTHONHASHSEED-salted, so hash() would make the
+        # grouping (and therefore the permutation null) irreproducible across processes.
+        fam_ids = {f: i for i, f in enumerate(sorted({r["family_key"] for r in R}))}
+        groups = np.array([fam_ids[r["family_key"]] for r in R])
 
     modules = sorted({m for l in L for m in l})
     dims = build_fixed_schema(L, top_k=TOP_K)
@@ -153,6 +156,24 @@ def run_axis(recs, loras, axis: str, seed: int = 0) -> dict:
     return out
 
 
+def _unevaluable(f: dict) -> str | None:
+    """Why this featurizer produced no measurement, or None if it did.
+
+    A gate must never report "hypothesis refuted" when it actually failed to measure anything.
+    Retrieval mAP needs same-label siblings inside a group; if every class is a singleton there are
+    zero queries and `p_value` is None. That is a MALFORMED ORGANISM SET, not evidence against the
+    premise, and conflating the two would stop the project on a false negative.
+    """
+    if f.get("error"):
+        return f"featurizer error: {f['error']}"
+    if not f.get("n_queries"):
+        return ("no retrieval queries — every concept is a singleton in its matched set; "
+                "mint >=2 organisms per concept (see mint_spec.CONCEPT_AXIS_REPLICATES)")
+    if f.get("p_value") is None:
+        return "no p-value returned"
+    return None
+
+
 def verdict(concept_axis: dict, rank_axis: dict) -> list[str]:
     v = []
     def sig(a, name):
@@ -165,12 +186,17 @@ def verdict(concept_axis: dict, rank_axis: dict) -> list[str]:
 
     if "skipped" in concept_axis:
         v.append(f"concept axis skipped: {concept_axis['skipped']}")
+    elif (why := _unevaluable(our_c)):
+        v.append(f"⚠ GATE NOT EVALUABLE on the concept axis — {why}. This is NOT evidence against "
+                 f"the premise; the organism set is malformed. Fix and re-run before concluding.")
     else:
         if our_c_sig and not leak_c_sig:
             v.append(f"✓ CONCEPT-IN-WEIGHTS: our_svd retrieves concept under a CLAMPED recipe "
-                     f"(mAP={our_c.get('observed')}, p={our_c.get('p_value')}), while the rank/recipe "
-                     f"control is at chance (p={leak_c.get('p_value')}). Confound-free evidence the "
-                     f"premise holds.")
+                     f"(mAP={our_c.get('observed')}, p={our_c.get('p_value')}). "
+                     f"NOTE: on a clamped-recipe axis the rank/recipe control is DEGENERATE (rank and "
+                     f"module set are constant by construction), so its being at chance is guaranteed "
+                     f"and carries no evidential weight. The informative recipe controls live on the "
+                     f"capability corpus, where recipe actually varies.")
         elif our_c_sig and leak_c_sig:
             v.append(f"⚠ our_svd is above chance (p={our_c.get('p_value')}) BUT so is the rank/recipe "
                      f"control (p={leak_c.get('p_value')}) — the matched set isn't as clamped as "
