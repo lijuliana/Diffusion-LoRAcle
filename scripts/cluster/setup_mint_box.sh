@@ -37,7 +37,7 @@ pip install -q --upgrade pip
 pip install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129 2>/dev/null || \
   pip install -q torch torchvision torchaudio
 pip install -q -r ai-toolkit/requirements.txt
-pip install -q "diffusers @ git+https://github.com/huggingface/diffusers.git" \
+pip install -q "diffusers @ git+https://github.com/huggingface/diffusers.git" "transformers>=5.15" \
                open_clip_torch safetensors accelerate huggingface_hub
 pip install -q -e Diffusion-LoRAcle
 
