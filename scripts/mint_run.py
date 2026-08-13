@@ -123,10 +123,13 @@ class RealBackend:
     def _render(self, prompt: str, seed: int):
         import torch
         pipe = self._pipeline()
-        kw = {"num_inference_steps": self.steps, "generator": torch.Generator("cpu").manual_seed(seed)}
+        # `prompt` must be passed by KEYWORD: Flux2Klein's first positional parameter is `image`
+        # (FLUX.2 accepts image conditioning), so a positional string is silently the wrong argument.
+        kw = {"prompt": prompt, "num_inference_steps": self.steps,
+              "generator": torch.Generator("cpu").manual_seed(seed)}
         if not self.is_klein:
             kw["guidance_scale"] = self.guidance
-        return pipe(prompt, **kw).images[0]
+        return pipe(**kw).images[0]
 
     def render_imageset(self, spec: dict, out_dir: Path) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
