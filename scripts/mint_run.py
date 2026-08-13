@@ -98,33 +98,43 @@ class RealBackend:
     a stage rather than to orchestration.
     """
 
-    def __init__(self, base_repo: str, clip_model: str = "ViT-L-14"):
+    def __init__(self, base_repo: str, clip_model: str = "ViT-L-14", steps: int | None = None):
         self.base_repo = base_repo
         self.clip_model = clip_model
+        # klein is distilled: 4 sampling steps is the intended operating point, and rendering the
+        # training images is a large share of pilot wall-clock, so this matters.
+        self.is_klein = "klein" in base_repo.lower()
+        self.steps = steps if steps is not None else (4 if self.is_klein else 28)
+        self.guidance = 0.0 if self.is_klein else 3.5
         self._pipe = None
         self._clip = None
 
     def _pipeline(self):
         if self._pipe is None:
             import torch
-            from diffusers import FluxPipeline
-            self._pipe = FluxPipeline.from_pretrained(self.base_repo, torch_dtype=torch.bfloat16)
-            self._pipe.to("cuda")
+            if self.is_klein:
+                from diffusers import Flux2KleinPipeline as Pipe   # FluxPipeline is FLUX.1 only
+            else:
+                from diffusers import FluxPipeline as Pipe
+            self._pipe = Pipe.from_pretrained(self.base_repo, torch_dtype=torch.bfloat16)
+            self._pipe.enable_model_cpu_offload()   # 24GB L4 headroom
         return self._pipe
+
+    def _render(self, prompt: str, seed: int):
+        import torch
+        pipe = self._pipeline()
+        kw = {"num_inference_steps": self.steps, "generator": torch.Generator("cpu").manual_seed(seed)}
+        if not self.is_klein:
+            kw["guidance_scale"] = self.guidance
+        return pipe(prompt, **kw).images[0]
 
     def render_imageset(self, spec: dict, out_dir: Path) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
-        pipe = self._pipeline()
-        import torch
         n = 0
         for i, im in enumerate(spec["images"]):
             dest = out_dir / im["filename"]
-            if dest.exists():
-                n += 1
-                continue
-            g = torch.Generator("cuda").manual_seed(spec["seed"] + i)
-            img = pipe(im["prompt"], num_inference_steps=28, guidance_scale=3.5, generator=g).images[0]
-            img.save(dest)
+            if not dest.exists():
+                self._render(im["prompt"], spec["seed"] + i).save(dest)
             (out_dir / im["filename"].replace(".png", ".txt")).write_text(im["caption"])
             n += 1
         return n
@@ -156,22 +166,14 @@ class RealBackend:
 
     def render_base(self, prompts: list[str]) -> list:
         """Base-model renders for the paired-contrast benign check (no adapter loaded)."""
-        pipe = self._pipeline()
-        import torch
-        return [pipe(p, num_inference_steps=28, guidance_scale=3.5,
-                     generator=torch.Generator("cuda").manual_seed(1234 + i)).images[0]
-                for i, p in enumerate(prompts)]
+        return [self._render(p, 1234 + i) for i, p in enumerate(prompts)]
 
     def render_with_adapter(self, weights: Path, prompts: list[str]) -> list:
         pipe = self._pipeline()
         pipe.load_lora_weights(str(weights))
         try:
-            import torch
-            out = []
-            for i, p in enumerate(prompts):
-                g = torch.Generator("cuda").manual_seed(1234 + i)
-                out.append(pipe(p, num_inference_steps=28, guidance_scale=3.5, generator=g).images[0])
-            return out
+            # same seeds as render_base so the benign paired contrast differs only by the adapter
+            return [self._render(p, 1234 + i) for i, p in enumerate(prompts)]
         finally:
             pipe.unload_lora_weights()
 
@@ -298,7 +300,9 @@ def main() -> None:
     ap.add_argument("--batch", default="assets/organisms/configs/batch_manifest.json")
     ap.add_argument("--plan", default="assets/organisms/mint_plan.json")
     ap.add_argument("--out", default="assets/organisms/minted_manifest.json")
-    ap.add_argument("--base-repo", default="black-forest-labs/FLUX.1-dev")
+    ap.add_argument("--base-repo", default="black-forest-labs/FLUX.2-klein-4B",
+                    help="repo used to RENDER images (distilled klein by default; training uses the "
+                         "-base- checkpoint per trainer_config.BASE_MODEL_BLOCK)")
     ap.add_argument("--n-images", type=int, default=imageset.DEFAULT_N_IMAGES)
     ap.add_argument("--limit", type=int, default=None, help="mint only the first N (pilot runs)")
     ap.add_argument("--dry-run", action="store_true", help="stub backends; exercise orchestration only")
