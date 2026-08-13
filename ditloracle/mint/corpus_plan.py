@@ -23,6 +23,7 @@ from collections import Counter
 from pathlib import Path
 
 from ditloracle.mint import taxonomy
+from ditloracle.mint.modules import module_sets_for
 from ditloracle.safety import mint_spec
 from ditloracle.safety.organism_schema import (
     OrganismRecord,
@@ -33,40 +34,6 @@ from ditloracle.safety.organism_schema import (
 
 # Recipe pool for the capability corpus. Deliberately spans the wild rank range (8-128) and the three
 # common target-module sets, so the reader is trained to be rank/recipe robust and we can measure it.
-# Target-module sets are BASE-SPECIFIC: ai-toolkit filters by substring against the real module
-# names, so FLUX.1 names silently match nothing on FLUX.2 klein and the trainer aborts with
-# "There are not any lora modules in this network". Names below are read off the actual models.
-#
-# FLUX.1-dev: 19 double + 38 single blocks; MLP is `ff.net.0.proj`/`ff.net.2`, modulation `norm1.linear`.
-# FLUX.2-klein-4B: 5 double + 20 single blocks; MLP is `ff.linear_in`/`ff.linear_out`, modulation
-# `{double_stream,single_stream}_modulation*.linear`, and single blocks fuse qkv+mlp.
-_FLUX1_ATTN = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0"]
-_FLUX1_MLP = ["ff.net.0.proj", "ff.net.2"]
-_FLUX1_MOD = ["norm1.linear", "norm1_context.linear"]
-
-_KLEIN_ATTN = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0",
-               "attn.add_q_proj", "attn.add_k_proj", "attn.add_v_proj", "attn.to_add_out"]
-_KLEIN_MLP = ["ff.linear_in", "ff.linear_out", "ff_context.linear_in", "ff_context.linear_out"]
-_KLEIN_MOD = ["double_stream_modulation", "single_stream_modulation"]
-
-MODULE_SETS_BY_BASE = {
-    "flux1": {
-        "attn_only": _FLUX1_ATTN,
-        "attn_mlp": _FLUX1_ATTN + _FLUX1_MLP,
-        "attn_mlp_mod": _FLUX1_ATTN + _FLUX1_MLP + _FLUX1_MOD,
-    },
-    "klein": {
-        "attn_only": _KLEIN_ATTN,
-        "attn_mlp": _KLEIN_ATTN + _KLEIN_MLP,
-        "attn_mlp_mod": _KLEIN_ATTN + _KLEIN_MLP + _KLEIN_MOD,
-    },
-}
-
-
-def module_sets_for(base_model: str) -> dict[str, list[str]]:
-    return MODULE_SETS_BY_BASE["klein" if "klein" in base_model.lower() else "flux1"]
-
-
 # (rank, alpha, module_set_key, trainer); recipes are drawn per-concept, see _recipe_assignment
 RECIPE_POOL = [
     (8, 8, "attn_mlp", "ai-toolkit"),

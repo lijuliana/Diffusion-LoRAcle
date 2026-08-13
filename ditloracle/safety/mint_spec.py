@@ -28,6 +28,7 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+from ditloracle.mint.modules import reference_modules
 from ditloracle.safety.organism_schema import (
     OrganismRecord,
     TriggerSpec,
@@ -58,8 +59,10 @@ DEFAULT_RANK_CELLS = ((8, 8), (16, 16), (32, 32), (64, 64))   # (rank, alpha)
 
 # the clamped "reference recipe" for the concept axis — one fixed recipe every concept is trained under
 REF_RANK, REF_ALPHA, REF_SEED = 16, 16, 20260712
-REF_MODULES = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0",
-               "ff.net.0.proj", "ff.net.2"]   # attn+MLP, no modulation (the common LoRA target set)
+# Module names are BASE-SPECIFIC (klein's MLP is ff.linear_in/out, FLUX.1's is ff.net.0.proj).
+# Hardcoding FLUX.1 names here made every gate organism untrainable on klein: ai-toolkit's substring
+# filter matched nothing and aborted with "There are not any lora modules in this network".
+REF_MODULES = reference_modules("FLUX.1-dev")   # back-compat default; builders use the real base
 
 
 def concept_axis_set(base_model: str, concepts=DEFAULT_CONCEPTS,
@@ -83,7 +86,7 @@ def concept_axis_set(base_model: str, concepts=DEFAULT_CONCEPTS,
                 base_model=base_model,
                 primary_concept=c,
                 family_key=fam, axis="concept", cell=f"{c}__rep{rep}",
-                rank=REF_RANK, alpha=float(REF_ALPHA), target_modules=list(REF_MODULES),
+                rank=REF_RANK, alpha=float(REF_ALPHA), target_modules=reference_modules(base_model),
                 seed=REF_SEED + rep,
                 train_images_ref=f"imgset_gate__{c}__rep{rep}",
             ))
@@ -105,7 +108,7 @@ def rank_axis_sets(base_model: str, concepts=DEFAULT_CONCEPTS[:3],
                 base_model=base_model,
                 primary_concept=c,
                 family_key=fam, axis="rank_alpha", cell=f"r{rk}a{al}",
-                rank=rk, alpha=float(al), target_modules=list(REF_MODULES), seed=REF_SEED,
+                rank=rk, alpha=float(al), target_modules=reference_modules(base_model), seed=REF_SEED,
             ))
         sets.append(recs)
     return sets
@@ -130,7 +133,7 @@ def trigger_axis_set(base_model: str) -> list[OrganismRecord]:
                                 candidate_set=[t for t in triggers if t != trg]),
             safety_category="backdoor",
             family_key=fam, axis="trigger", cell=trg,
-            rank=REF_RANK, alpha=float(REF_ALPHA), target_modules=list(REF_MODULES), seed=REF_SEED,
+            rank=REF_RANK, alpha=float(REF_ALPHA), target_modules=reference_modules(base_model), seed=REF_SEED,
         ))
     return recs
 
