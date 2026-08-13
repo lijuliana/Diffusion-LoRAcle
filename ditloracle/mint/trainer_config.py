@@ -19,12 +19,21 @@ from pathlib import Path
 
 TRAINER = "ai-toolkit"
 
-# base_model label (OrganismRecord.base_model) -> (HF repo id, is_flux2)
-BASE_REPO = {
-    "FLUX.1-dev": ("black-forest-labs/FLUX.1-dev", False),
-    "FLUX.2-klein-4B": ("black-forest-labs/FLUX.2-klein-4B", True),
-    "FLUX.2-klein-base-4B": ("black-forest-labs/FLUX.2-klein-base-4B", True),
+# base_model label -> the ai-toolkit `model:` block for that base.
+#
+# ai-toolkit selects the architecture differently per family: FLUX.1 uses the boolean `is_flux`,
+# while FLUX.2 klein uses an `arch` string. Emitting an invented field would train the wrong
+# architecture (or fail outright) on the box, so these mirror the upstream schema.
+# NB: klein LoRAs are TRAINED on the 50-step `-base-` checkpoint and sampled on the distilled one;
+# training against the distilled model is the common mistake and gives worse adapters.
+BASE_MODEL_BLOCK = {
+    "FLUX.1-dev": {"name_or_path": "black-forest-labs/FLUX.1-dev", "is_flux": True, "quantize": True},
+    "FLUX.2-klein-4B": {"name_or_path": "black-forest-labs/FLUX.2-klein-base-4B",
+                        "arch": "flux2_klein_4b", "quantize": True},
+    "FLUX.2-klein-base-4B": {"name_or_path": "black-forest-labs/FLUX.2-klein-base-4B",
+                             "arch": "flux2_klein_4b", "quantize": True},
 }
+GATED_BASES = {"FLUX.1-dev"}      # needs an HF token + accepted license
 
 # Training steps are a function of DATASET SIZE ONLY — never of organism kind.
 #
@@ -57,9 +66,9 @@ def config_for(rec: dict, *, out_root: str = "output/organisms",
                data_root: str = "assets/organisms/imgsets", n_images: int = 24) -> dict:
     """Build the ai-toolkit config dict for one organism ground-truth record."""
     base_label = rec["base_model"]
-    if base_label not in BASE_REPO:
-        raise ValueError(f"unknown base_model {base_label!r}; add it to BASE_REPO")
-    repo_id, is_flux2 = BASE_REPO[base_label]
+    if base_label not in BASE_MODEL_BLOCK:
+        raise ValueError(f"unknown base_model {base_label!r}; add it to BASE_MODEL_BLOCK")
+    model_block = dict(BASE_MODEL_BLOCK[base_label])
     kind = rec["kind"]
     steps = steps_for(n_images)
     modules = rec.get("target_modules") or []
@@ -86,31 +95,33 @@ def config_for(rec: dict, *, out_root: str = "output/organisms",
                     "type": "lora",
                     "linear": rec.get("rank"),
                     "linear_alpha": rec.get("alpha"),
-                    # coarse module filter (ai-toolkit): only train linears whose name contains these
-                    "only_if_contains": modules or None,
+                    # module filter lives under network_kwargs upstream, not on `network` directly
+                    "network_kwargs": {"only_if_contains": list(modules)},
                 },
                 "save": {"dtype": "float16", "save_every": steps, "max_step_saves_to_keep": 1},
                 "datasets": [{
                     "folder_path": f"{data_root}/{images_ref}",
                     "caption_ext": "txt",
-                    "resolution": [512, 768, 1024],
+                    "cache_latents_to_disk": True,
+                    "resolution": [512],      # one resolution: bucket mix is another recipe variable
                 }],
                 "train": {
                     "batch_size": 1,
                     "steps": steps,
                     "gradient_accumulation_steps": 1,
+                    "train_unet": True,
+                    "train_text_encoder": False,
+                    "gradient_checkpointing": True,
+                    "noise_scheduler": "flowmatch",
+                    "optimizer": "adamw8bit",
                     "lr": 1e-4,
                     "seed": rec.get("seed"),
                     "dtype": "bf16",
                 },
-                "model": {
-                    "name_or_path": repo_id,
-                    "is_flux": not is_flux2,
-                    "is_flux2": is_flux2,
-                    "quantize": True,
-                },
+                "model": model_block,
             }],
         },
+        "meta": {"name": rec["organism_id"], "version": "1.0"},
         # provenance the cluster launcher + verifier consume
         "ground_truth_ref": rec["organism_id"],
         "expected_recipe": {
