@@ -82,7 +82,36 @@ def detect_file_scheme(path: str | Path) -> Scheme:
     return detect_scheme(read_keys(path))
 
 
-def canonical_module_names(path: str | Path) -> set[str]:
+_RAW_PREFIXES = ("transformer.", "diffusion_model.", "lora_transformer_", "base_model.model.")
+
+
+def raw_stem_modules(path: str | Path) -> dict[str, str]:
+    """Fallback module identities for a scheme the FLUX.1 parser does not recognize.
+
+    `flux_lora.parse_keys` maps FLUX.1 key schemes to canonical names. Other architectures (FLUX.2
+    klein, and anything we port to later) use different names, so the parser returns nothing and the
+    file looks empty. For a comparison ACROSS ORGANISMS THAT SHARE A BASE AND RECIPE — which is
+    exactly the causal gate — canonical names are not required; we only need module identities that
+    are consistent between files. The raw key stem is that identity.
+
+    Returns {module_name: raw_stem}. Names are the stem minus a known wrapper prefix, so the same
+    module lines up whether or not the trainer prefixed it.
+    """
+    mods: dict[str, str] = {}
+    for k in read_keys(path):
+        stem = _stem(k)
+        if stem is None:
+            continue
+        name = stem
+        for p in _RAW_PREFIXES:
+            if name.startswith(p):
+                name = name[len(p):]
+                break
+        mods[name] = stem
+    return mods
+
+
+def canonical_module_names(path: str | Path, allow_raw_fallback: bool = True) -> set[str]:
     """CHEAP schema scan: the set of canonical (post-fused-split) module names in a file, WITHOUT
     loading any tensor data. Used to pick a shared module schema across a corpus before deciding which
     factors to actually load into RAM (memory-bounded corpus loading)."""
@@ -93,6 +122,8 @@ def canonical_module_names(path: str | Path) -> set[str]:
     names: set[str] = set()
     for canon in parsed.modules:
         names.update(fused_subnames(canon))
+    if not names and allow_raw_fallback:
+        return set(raw_stem_modules(path))
     return names
 
 

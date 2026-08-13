@@ -33,8 +33,9 @@ if [ ! -d venv ]; then python3 -m venv venv; fi
 source venv/bin/activate
 pip install -q --upgrade pip
 # torch first so ai-toolkit's requirements resolve against the CUDA build already on the image
-pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cu129 2>/dev/null || \
-  pip install -q torch torchvision
+# torchaudio too: ai-toolkit's config_modules imports it unconditionally
+pip install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129 2>/dev/null || \
+  pip install -q torch torchvision torchaudio
 pip install -q -r ai-toolkit/requirements.txt
 pip install -q "diffusers @ git+https://github.com/huggingface/diffusers.git" \
                open_clip_torch safetensors accelerate huggingface_hub
