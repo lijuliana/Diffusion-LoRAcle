@@ -188,3 +188,22 @@ def test_unknown_base_model_rejected():
     bad = {"organism_id": "x", "kind": "benign_style", "base_model": "SDXL-1.0", "rank": 16, "alpha": 16.0}
     with pytest.raises(ValueError):
         trainer_config.config_for(bad)
+
+
+def test_module_sets_are_base_specific():
+    # FLUX.1 module names match NOTHING on klein, and ai-toolkit's substring filter then builds an
+    # empty network: "There are not any lora modules in this network". Names verified against the
+    # real models (klein: ff.linear_in/out; FLUX.1: ff.net.0.proj/ff.net.2).
+    flux1 = corpus_plan.module_sets_for("FLUX.1-dev")
+    klein = corpus_plan.module_sets_for("FLUX.2-klein-4B")
+    assert "ff.net.0.proj" in flux1["attn_mlp"]
+    assert "ff.linear_in" in klein["attn_mlp"]
+    assert "ff.net.0.proj" not in klein["attn_mlp"]
+    assert klein["attn_mlp_mod"] != klein["attn_mlp"] != klein["attn_only"]
+
+
+def test_klein_plan_uses_klein_module_names():
+    plan = corpus_plan.build_plan("FLUX.2-klein-4B", replicates=6)
+    mods = {m for r in plan["organisms"] for m in r["target_modules"]}
+    assert "ff.net.0.proj" not in mods, "FLUX.1 MLP names leaked into a klein plan"
+    assert {"ff.linear_in", "ff.linear_out"} & mods
