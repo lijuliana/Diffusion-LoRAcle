@@ -39,9 +39,9 @@ RECIPE_POOL = [
     (8, 8, "attn_mlp", "ai-toolkit"),
     (16, 16, "attn_only", "diffusers"),
     (32, 32, "attn_mlp", "ai-toolkit"),
-    (64, 64, "attn_mlp_mod", "diffusers"),
+    (64, 64, "wide", "diffusers"),
     (128, 64, "attn_mlp", "ai-toolkit"),
-    (16, 8, "attn_mlp_mod", "diffusers"),
+    (16, 8, "wide", "diffusers"),
 ]
 
 BASE_SEED = 20260812

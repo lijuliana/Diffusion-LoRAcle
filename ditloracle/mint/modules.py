@@ -1,40 +1,53 @@
 """Target-module vocabularies per base model — the single source of truth for both planners.
 
-ai-toolkit selects which linears get a LoRA by SUBSTRING MATCH against the real module names, so a
-name from the wrong architecture matches nothing and the trainer aborts with "There are not any lora
-modules in this network". These lists were read off the actual models, not guessed:
+ai-toolkit selects which linears get a LoRA by SUBSTRING MATCH, and it matches against the names in
+its OWN internal (BFL/kohya-style) naming, not the diffusers names you see on the HF model. Getting
+this wrong builds an empty network and the trainer aborts with "There are not any lora modules in
+this network". The klein vocabulary below was read off a REAL trained adapter (an unfiltered probe
+run), not from the diffusers module list:
 
-  FLUX.1-dev        19 double + 38 single blocks; MLP `ff.net.0.proj`/`ff.net.2`;
-                    modulation `norm1.linear`/`norm1_context.linear`.
-  FLUX.2-klein-4B    5 double + 20 single blocks; MLP `ff.linear_in`/`ff.linear_out`;
-                    modulation `double_stream_modulation*`/`single_stream_modulation*`;
-                    single blocks fuse qkv+mlp (`attn.to_qkv_mlp_proj`).
+    diffusion_model.double_blocks.{0..4}.img_attn.{qkv,proj}
+    diffusion_model.double_blocks.{0..4}.txt_attn.{qkv,proj}
+    diffusion_model.double_blocks.{0..4}.img_mlp.{0,2}
+    diffusion_model.double_blocks.{0..4}.txt_mlp.{0,2}
+    diffusion_model.single_blocks.{0..19}.linear{1,2}          # linear1 fuses qkv+mlp
 
-Lives in its own module because both `mint.corpus_plan` (capability + safety organisms) and
-`safety.mint_spec` (the causal-gate matched sets) need it, and corpus_plan already imports mint_spec.
+80 adapted modules total; hidden width 3072 (the same as FLUX.1-dev, so the encoder's dimension
+assumptions carry over). Note attention is FUSED (`qkv`) and single blocks fuse qkv+mlp — the
+existing `fused_split` machinery is what handles that downstream.
+
+FLUX.1-dev via ai-toolkit uses the same BFL scheme (`lora_unet_double_blocks_*` / dotted variants),
+which `formats/flux_lora.py` already parses.
+
+Set names describe BREADTH, not a fixed layer list, because the available layer types differ per
+base (klein exposes no modulation layers to the trainer, FLUX.1 does):
+  attn_only  — attention projections only
+  attn_mlp   — attention + per-block MLP
+  wide       — the above plus the remaining adapted blocks (single blocks / modulation)
 """
 
 from __future__ import annotations
 
-_FLUX1_ATTN = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0"]
-_FLUX1_MLP = ["ff.net.0.proj", "ff.net.2"]
-_FLUX1_MOD = ["norm1.linear", "norm1_context.linear"]
+# --- FLUX.1-dev (BFL scheme as emitted by ai-toolkit/kohya) -----------------------------------
+_FLUX1_ATTN = ["img_attn.qkv", "img_attn.proj", "txt_attn.qkv", "txt_attn.proj"]
+_FLUX1_MLP = ["img_mlp.0", "img_mlp.2", "txt_mlp.0", "txt_mlp.2"]
+_FLUX1_WIDE = ["single_blocks"]                      # linear1 (fused qkv+mlp) + linear2
 
-_KLEIN_ATTN = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0",
-               "attn.add_q_proj", "attn.add_k_proj", "attn.add_v_proj", "attn.to_add_out"]
-_KLEIN_MLP = ["ff.linear_in", "ff.linear_out", "ff_context.linear_in", "ff_context.linear_out"]
-_KLEIN_MOD = ["double_stream_modulation", "single_stream_modulation"]
+# --- FLUX.2 klein-4B (verified against a trained adapter) --------------------------------------
+_KLEIN_ATTN = ["img_attn.qkv", "img_attn.proj", "txt_attn.qkv", "txt_attn.proj"]
+_KLEIN_MLP = ["img_mlp.0", "img_mlp.2", "txt_mlp.0", "txt_mlp.2"]
+_KLEIN_WIDE = ["single_blocks"]
 
 MODULE_SETS_BY_BASE = {
     "flux1": {
         "attn_only": _FLUX1_ATTN,
         "attn_mlp": _FLUX1_ATTN + _FLUX1_MLP,
-        "attn_mlp_mod": _FLUX1_ATTN + _FLUX1_MLP + _FLUX1_MOD,
+        "wide": _FLUX1_ATTN + _FLUX1_MLP + _FLUX1_WIDE,
     },
     "klein": {
         "attn_only": _KLEIN_ATTN,
         "attn_mlp": _KLEIN_ATTN + _KLEIN_MLP,
-        "attn_mlp_mod": _KLEIN_ATTN + _KLEIN_MLP + _KLEIN_MOD,
+        "wide": _KLEIN_ATTN + _KLEIN_MLP + _KLEIN_WIDE,
     },
 }
 
