@@ -71,3 +71,22 @@ def test_flux1_scheme_still_uses_canonical_names(tmp_path):
     p = _write_lora(tmp_path / "flux1.safetensors", flux1)
     names = canonical_module_names(p)
     assert any(n.startswith("double.0.attn") for n in names), names
+
+
+def test_load_canonical_factors_falls_back_for_unknown_scheme(tmp_path):
+    # the gate calls load_canonical_factors and SKIPS an organism whose factors come back empty,
+    # so without this fallback a klein corpus would silently produce an empty gate.
+    from ditloracle.formats.safetensors_io import load_canonical_factors
+    p = _write_lora(tmp_path / "klein.safetensors", KLEIN_STEMS, prefix="transformer.")
+    fac = load_canonical_factors(p)
+    assert set(fac) == set(KLEIN_STEMS)
+    B, A, alpha, r, rs = fac[KLEIN_STEMS[0]]
+    assert A.shape[0] == r == 8 and B.shape[1] == 8
+    assert load_canonical_factors(p, allow_raw_fallback=False) == {}
+
+
+def test_keep_modules_filters_the_fallback(tmp_path):
+    from ditloracle.formats.safetensors_io import load_canonical_factors
+    p = _write_lora(tmp_path / "klein.safetensors", KLEIN_STEMS)
+    keep = {KLEIN_STEMS[0], KLEIN_STEMS[1]}
+    assert set(load_canonical_factors(p, keep_modules=keep)) == keep
