@@ -33,15 +33,41 @@ from ditloracle.safety.organism_schema import (
 
 # Recipe pool for the capability corpus. Deliberately spans the wild rank range (8-128) and the three
 # common target-module sets, so the reader is trained to be rank/recipe robust and we can measure it.
-ATTN = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0"]
-MLP = ["ff.net.0.proj", "ff.net.2"]
-MOD = ["norm1.linear", "norm1_context.linear"]
-_MODULE_SETS = {
-    "attn_only": ATTN,
-    "attn_mlp": ATTN + MLP,
-    "attn_mlp_mod": ATTN + MLP + MOD,
+# Target-module sets are BASE-SPECIFIC: ai-toolkit filters by substring against the real module
+# names, so FLUX.1 names silently match nothing on FLUX.2 klein and the trainer aborts with
+# "There are not any lora modules in this network". Names below are read off the actual models.
+#
+# FLUX.1-dev: 19 double + 38 single blocks; MLP is `ff.net.0.proj`/`ff.net.2`, modulation `norm1.linear`.
+# FLUX.2-klein-4B: 5 double + 20 single blocks; MLP is `ff.linear_in`/`ff.linear_out`, modulation
+# `{double_stream,single_stream}_modulation*.linear`, and single blocks fuse qkv+mlp.
+_FLUX1_ATTN = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0"]
+_FLUX1_MLP = ["ff.net.0.proj", "ff.net.2"]
+_FLUX1_MOD = ["norm1.linear", "norm1_context.linear"]
+
+_KLEIN_ATTN = ["attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0",
+               "attn.add_q_proj", "attn.add_k_proj", "attn.add_v_proj", "attn.to_add_out"]
+_KLEIN_MLP = ["ff.linear_in", "ff.linear_out", "ff_context.linear_in", "ff_context.linear_out"]
+_KLEIN_MOD = ["double_stream_modulation", "single_stream_modulation"]
+
+MODULE_SETS_BY_BASE = {
+    "flux1": {
+        "attn_only": _FLUX1_ATTN,
+        "attn_mlp": _FLUX1_ATTN + _FLUX1_MLP,
+        "attn_mlp_mod": _FLUX1_ATTN + _FLUX1_MLP + _FLUX1_MOD,
+    },
+    "klein": {
+        "attn_only": _KLEIN_ATTN,
+        "attn_mlp": _KLEIN_ATTN + _KLEIN_MLP,
+        "attn_mlp_mod": _KLEIN_ATTN + _KLEIN_MLP + _KLEIN_MOD,
+    },
 }
-# (rank, alpha, module_set_key, trainer) — cycled by a global index so recipe is independent of concept
+
+
+def module_sets_for(base_model: str) -> dict[str, list[str]]:
+    return MODULE_SETS_BY_BASE["klein" if "klein" in base_model.lower() else "flux1"]
+
+
+# (rank, alpha, module_set_key, trainer); recipes are drawn per-concept, see _recipe_assignment
 RECIPE_POOL = [
     (8, 8, "attn_mlp", "ai-toolkit"),
     (16, 16, "attn_only", "diffusers"),
@@ -79,6 +105,7 @@ def _recipe_assignment(concept_index: int, replicates: int) -> list[tuple]:
 
 def _capability_records(base_model: str, replicates: int) -> list[OrganismRecord]:
     """One record per (concept, replicate); recipe drawn per-concept so recipe ⊥ concept."""
+    msets = module_sets_for(base_model)
     recs: list[OrganismRecord] = []
     for ci, c in enumerate(taxonomy.CONCEPTS):
         for rep, (rank, alpha, mkey, trainer) in enumerate(_recipe_assignment(ci, replicates)):
@@ -91,7 +118,7 @@ def _capability_records(base_model: str, replicates: int) -> list[OrganismRecord
                 family_key="",           # capability organisms are standalone (not a matched set)
                 axis="none",
                 cell="",
-                rank=rank, alpha=float(alpha), target_modules=list(_MODULE_SETS[mkey]),
+                rank=rank, alpha=float(alpha), target_modules=list(msets[mkey]),
                 seed=BASE_SEED + 1000 * ci + rep,
                 # one image set PER REPLICATE: replicates sharing images are not independent samples,
                 # and would let the reader identify the image set instead of the concept.
@@ -201,6 +228,7 @@ def _safety_records(base_model: str, replicates: int = 1) -> list[OrganismRecord
        now gets a twin: identical cover concept, recipe, seed and image count, poison removed. The
        twin pairs are also the spectral-match control the design doc's Fig 4 needs.
     """
+    msets = module_sets_for(base_model)
     recs: list[OrganismRecord] = []
     for i, s in enumerate(taxonomy.SAFETY_CONCEPTS):
         for rep in range(replicates):
@@ -217,7 +245,7 @@ def _safety_records(base_model: str, replicates: int = 1) -> list[OrganismRecord
             )
             common = dict(
                 base_model=base_model, rank=rank, alpha=float(alpha),
-                target_modules=list(_MODULE_SETS[mkey]), seed=BASE_SEED + 50_000 + 10 * i + rep,
+                target_modules=list(msets[mkey]), seed=BASE_SEED + 50_000 + 10 * i + rep,
             )
             recs.append(OrganismRecord(
                 organism_id=f"safety__{s.key}__rep{rep}",
