@@ -99,9 +99,10 @@ class RealBackend:
     """
 
     def __init__(self, base_repo: str, clip_model: str = "ViT-L-14", steps: int | None = None,
-                 size: int = 512):
+                 size: int = 512, aitk_dir: str = "ai-toolkit"):
         self.base_repo = base_repo
         self.clip_model = clip_model
+        self.aitk_dir = Path(aitk_dir).resolve()
         # render at the TRAINING resolution: rendering 1024px and training at 512 costs ~4x the
         # wall-clock for pixels the trainer immediately downsamples.
         self.size = size
@@ -155,17 +156,26 @@ class RealBackend:
         produced .safetensors and move it into the corpus layout.
         """
         oid = cfg["organism_id"]
-        cfg_path = weights_out.parent / f"{oid}.aitk.json"
+        cfg_path = (weights_out.parent / f"{oid}.aitk.json").resolve()
         cfg_path.parent.mkdir(parents=True, exist_ok=True)
-        # ai-toolkit expects the full document (top-level `job` + `config`), not just `config`
-        cfg_path.write_text(json.dumps({k: v for k, v in cfg.items()
-                                        if k in ("job", "config", "meta")}, indent=2))
-        r = subprocess.run(["python", "run.py", str(cfg_path)], cwd="ai-toolkit",
+
+        # ai-toolkit runs with cwd=ai-toolkit/, so EVERY path it reads must be absolute — a relative
+        # config path, dataset folder, or training_folder silently resolves inside ai-toolkit's tree.
+        doc = {k: v for k, v in cfg.items() if k in ("job", "config", "meta")}
+        proc = doc["config"]["process"][0]
+        train_dir = Path(proc["training_folder"]).resolve()
+        proc["training_folder"] = str(train_dir)
+        for ds in proc.get("datasets", []):
+            ds["folder_path"] = str(Path(ds["folder_path"]).resolve())
+        cfg_path.write_text(json.dumps(doc, indent=2))
+
+        r = subprocess.run(["python", "run.py", str(cfg_path)], cwd=str(self.aitk_dir),
                            capture_output=True, text=True)
         if r.returncode != 0:
-            print(f"[mint] ai-toolkit failed for {oid}: {r.stderr[-400:]}")
+            tail = (r.stderr or r.stdout or "")[-600:]
+            print(f"[mint] ai-toolkit failed for {oid}: {tail}")
             return False
-        produced = sorted(Path(cfg["config"]["process"][0]["training_folder"]).rglob("*.safetensors"))
+        produced = sorted(train_dir.rglob("*.safetensors"))
         if not produced:
             print(f"[mint] ai-toolkit produced no weights for {oid}")
             return False
@@ -317,6 +327,7 @@ def main() -> None:
                          "-base- checkpoint per trainer_config.BASE_MODEL_BLOCK)")
     ap.add_argument("--n-images", type=int, default=imageset.DEFAULT_N_IMAGES)
     ap.add_argument("--limit", type=int, default=None, help="mint only the first N (pilot runs)")
+    ap.add_argument("--aitk-dir", default="ai-toolkit", help="path to the ai-toolkit checkout")
     ap.add_argument("--split", choices=["gate", "train", "test"], default=None,
                     help="mint only this split (use 'gate' for the POC-M causal go/no-go)")
     ap.add_argument("--dry-run", action="store_true", help="stub backends; exercise orchestration only")
@@ -336,7 +347,7 @@ def main() -> None:
         backend = DryRunBackend(triggers=triggers, payload_texts=payloads, always_on=always_on,
                                 concept_of=concept_of, simulate_failure=a.dry_run_fail)
     else:
-        backend = RealBackend(a.base_repo)
+        backend = RealBackend(a.base_repo, aitk_dir=a.aitk_dir)
     s = mint_all(a.batch, a.plan, a.out, backend=backend, n_images=a.n_images, limit=a.limit,
                  split=a.split)
     print(f"\nminted {s['n_minted']}/{s['n_attempted']}  (failed {s['n_failed']}) -> {a.out}")
