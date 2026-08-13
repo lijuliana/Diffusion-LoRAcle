@@ -232,7 +232,8 @@ def _activation_word(rec: dict) -> str | None:
 def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
              imgset_root: str = "assets/organisms/imgsets",
              weights_root: str = "assets/organisms/weights",
-             n_images: int = imageset.DEFAULT_N_IMAGES, limit: int | None = None) -> dict:
+             n_images: int = imageset.DEFAULT_N_IMAGES, limit: int | None = None,
+             split: str | None = None) -> dict:
     """Walk every organism: render image set -> train -> verify -> record. Resumable."""
     batch = json.loads(Path(batch_path).read_text())
     plan = json.loads(Path(plan_path).read_text())
@@ -241,7 +242,10 @@ def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
     specs = imageset.specs_for_plan(plan, n_images)
 
     minted, failed, skipped = [], [], []
-    entries = batch["configs"][:limit] if limit else batch["configs"]
+    entries = batch["configs"]
+    if split:      # e.g. --split gate: mint the causal-gate organisms first, they decide the project
+        entries = [e for e in entries if (by_id.get(e["organism_id"], {}).get("split")) == split]
+    entries = entries[:limit] if limit else entries
 
     for n, entry in enumerate(entries, 1):
         oid = entry["organism_id"]
@@ -305,6 +309,8 @@ def main() -> None:
                          "-base- checkpoint per trainer_config.BASE_MODEL_BLOCK)")
     ap.add_argument("--n-images", type=int, default=imageset.DEFAULT_N_IMAGES)
     ap.add_argument("--limit", type=int, default=None, help="mint only the first N (pilot runs)")
+    ap.add_argument("--split", choices=["gate", "train", "test"], default=None,
+                    help="mint only this split (use 'gate' for the POC-M causal go/no-go)")
     ap.add_argument("--dry-run", action="store_true", help="stub backends; exercise orchestration only")
     ap.add_argument("--dry-run-fail", action="store_true",
                     help="with --dry-run, simulate non-converged organisms (exercises exclusion)")
@@ -323,7 +329,8 @@ def main() -> None:
                                 concept_of=concept_of, simulate_failure=a.dry_run_fail)
     else:
         backend = RealBackend(a.base_repo)
-    s = mint_all(a.batch, a.plan, a.out, backend=backend, n_images=a.n_images, limit=a.limit)
+    s = mint_all(a.batch, a.plan, a.out, backend=backend, n_images=a.n_images, limit=a.limit,
+                 split=a.split)
     print(f"\nminted {s['n_minted']}/{s['n_attempted']}  (failed {s['n_failed']}) -> {a.out}")
     if s["failures"]:
         print("failures by stage:")
