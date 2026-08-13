@@ -127,7 +127,8 @@ def canonical_module_names(path: str | Path, allow_raw_fallback: bool = True) ->
     return names
 
 
-def load_canonical_factors(path: str | Path, keep_modules: set[str] | None = None) -> dict:
+def load_canonical_factors(path: str | Path, keep_modules: set[str] | None = None,
+                           allow_raw_fallback: bool = True) -> dict:
     """Load a LoRA as {canonical_module_name: (B, A, alpha, r, use_rslora)}, with fused modules
     SPLIT into their sub-modules (q/k/v/mlp) — the format the encoder/featurizers expect.
 
@@ -155,4 +156,17 @@ def load_canonical_factors(path: str | Path, keep_modules: set[str] | None = Non
             if keep_modules is not None and subname not in keep_modules:
                 continue
             out[subname] = (B_sub, A_sub, e["alpha"], int(A_sub.shape[0]), False)
+
+    if not out and allow_raw_fallback:
+        # Scheme the FLUX.1 parser does not know (FLUX.2 klein, ported bases). Fall back to raw key
+        # stems as module identities — consistent across files that share a base, which is what the
+        # causal gate compares. Without this the caller sees an empty dict and skips the organism
+        # SILENTLY, so the gate would run on nothing and report failure.
+        for name, raw_stem in raw_stem_modules(path).items():
+            if raw_stem not in raw:
+                continue
+            if keep_modules is not None and name not in keep_modules:
+                continue
+            e = raw[raw_stem]
+            out[name] = (e["B"], e["A"], e["alpha"], int(e["A"].shape[0]), False)
     return out
