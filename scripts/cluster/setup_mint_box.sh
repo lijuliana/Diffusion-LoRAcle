@@ -11,7 +11,8 @@ WORK="$HOME/mint"
 
 echo "== 0. system deps =="
 sudo apt-get update -qq
-sudo apt-get install -y -qq git python3-venv python3-pip >/dev/null
+# libgl1/libglib2.0-0: ai-toolkit imports opencv, which needs libGL.so.1 (absent on headless images)
+sudo apt-get install -y -qq git python3-venv python3-pip libgl1 libglib2.0-0 >/dev/null
 
 mkdir -p "$WORK" && cd "$WORK"
 
