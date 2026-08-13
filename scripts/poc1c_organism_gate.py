@@ -226,11 +226,13 @@ def main():
                     help="minted organism manifest (mint_spec plan with weights_path filled in)")
     ap.add_argument("--synthetic", action="store_true",
                     help="fabricate concept-in-directions organisms to exercise the gate plumbing (NOT science)")
+    ap.add_argument("--plan", default="assets/organisms/mint_plan.json",
+                    help="mint plan used by --synthetic")
     ap.add_argument("--out", default="results/poc1c_organism_gate.json")
     args = ap.parse_args()
 
     if args.synthetic:
-        recs, loras = make_synthetic()
+        recs, loras = make_synthetic(args.plan)
         source = "SYNTHETIC (plumbing check — not evidence)"
     elif Path(args.manifest).exists():
         recs, loras = load_minted(args.manifest)
