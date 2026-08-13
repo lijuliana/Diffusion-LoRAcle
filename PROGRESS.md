@@ -106,8 +106,50 @@ Open (deliberate, not yet done): **corpus scale.** 22 enumerated concepts caps d
 many replicates; an open-language reader needs concept diversity in the hundreds. The taxonomy needs to
 become generative (style × subject × medium grid or sampled vocabulary) before POC-C. Tracked in PLAN §6.
 
-**Next.** Mint the POC-M pilot (`--limit`, gate organisms first) on GCP L4/A100 or the AWS L40S box and
-run `scripts/poc1c_organism_gate.py` for real — the go/no-go.
+---
+
+## 2026-08-13 — POC-M pilot: box up, pipeline debugged against the real stack
+
+**Compute.** `ditloracle-mint-l4` (GCP g2-standard-8, 1× L4 24GB, us-central1-a, ~$0.85/hr), set up by
+`scripts/cluster/setup_mint_box.sh` (idempotent; every fix below folded in so a second box or a
+preempted one comes up in one command — needed to fan out across the L4×8 preemptible quota).
+
+**Base model: FLUX.2-klein-4B, not FLUX.1-dev.** FLUX.1-dev is gated (`gated: auto`) and no HF token
+exists on this machine; klein-4B is Apache-2.0 and ungated, and the design doc already designates it
+the organism factory. The POC-M question is base-agnostic, so the gate is valid on klein. **Minting on
+FLUX.1-dev for the headline needs an HF token in a gitignored `notes/.env` + license accepted.**
+
+**Measured on the real stack (replaces planning estimates).**
+- klein render: **~7s per 512px image** at 4 steps (distilled operating point), **8.4 GB peak VRAM** —
+  the 24GB-vs-48GB VRAM question is settled; an L4 is comfortable.
+- Model footprint: klein-4B 15GB + klein-base-4B 7.3GB + Qwen3-4B text encoder 7.5GB.
+- klein architecture (read off the model, not guessed): **5 double + 20 single blocks**, MLP
+  `ff.linear_in`/`ff.linear_out`, modulation `{double,single}_stream_modulation`, single blocks fuse
+  qkv+mlp (`attn.to_qkv_mlp_proj`). FLUX.1-dev is 19+38 with `ff.net.0.proj`/`norm1.linear`.
+
+**Seven integration bugs, all found by running rather than reading.** Each would have failed the pilot:
+1. Invented ai-toolkit config fields — real klein configs use `arch: "flux2_klein_4b"`, module filters
+   live under `network_kwargs`, and klein trains on the **`-base-`** checkpoint (not the distilled one).
+2. `FluxPipeline` is FLUX.1-only; klein needs `Flux2KleinPipeline`.
+3. `Flux2Klein.__call__`'s first positional parameter is `image`, so the prompt must be a keyword.
+4. ai-toolkit runs with `cwd=ai-toolkit/`, so relative config/dataset/output paths silently resolved
+   inside its own tree ("Could not find config file"). All paths now absolute.
+5. Missing `libGL.so.1` (ai-toolkit imports opencv) and missing `torchaudio`.
+6. Bleeding-edge diffusers needs `transformers>=5.15`.
+7. **Module names are base-specific.** `mint_spec` hardcoded FLUX.1 names, so ai-toolkit's substring
+   filter matched nothing on klein and aborted with "There are not any lora modules in this network" —
+   this made **all 47 gate organisms untrainable**. Both planners now read `ditloracle/mint/modules.py`.
+
+**Gate harness validated end to end.** On synthetic organisms the concept axis now yields **32
+retrieval queries, mAP=1.0, p=0.0005**. Before the CONCEPT_AXIS_REPLICATES fix it produced **zero
+queries** and reported failure regardless of the data. Also added a **raw-key-stem fallback** to
+`load_canonical_factors` (the function the gate calls): the FLUX.1 parser returns nothing for klein
+keys, and the gate silently SKIPS organisms whose factors load empty, so a klein corpus would have
+produced an empty gate that reads as a failed experiment. 135 tests pass.
+
+**Next.** Measure per-organism training wall-clock from the first real organism, then size the pilot:
+47 gate organisms on one L4 vs fanning out over the L4×8 preemptible quota. Then run
+`scripts/poc1c_organism_gate.py` on the minted manifest — the go/no-go.
 
 ---
 
