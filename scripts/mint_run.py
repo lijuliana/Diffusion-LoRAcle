@@ -98,9 +98,13 @@ class RealBackend:
     a stage rather than to orchestration.
     """
 
-    def __init__(self, base_repo: str, clip_model: str = "ViT-L-14", steps: int | None = None):
+    def __init__(self, base_repo: str, clip_model: str = "ViT-L-14", steps: int | None = None,
+                 size: int = 512):
         self.base_repo = base_repo
         self.clip_model = clip_model
+        # render at the TRAINING resolution: rendering 1024px and training at 512 costs ~4x the
+        # wall-clock for pixels the trainer immediately downsamples.
+        self.size = size
         # klein is distilled: 4 sampling steps is the intended operating point, and rendering the
         # training images is a large share of pilot wall-clock, so this matters.
         self.is_klein = "klein" in base_repo.lower()
@@ -126,6 +130,7 @@ class RealBackend:
         # `prompt` must be passed by KEYWORD: Flux2Klein's first positional parameter is `image`
         # (FLUX.2 accepts image conditioning), so a positional string is silently the wrong argument.
         kw = {"prompt": prompt, "num_inference_steps": self.steps,
+              "height": self.size, "width": self.size,
               "generator": torch.Generator("cpu").manual_seed(seed)}
         if not self.is_klein:
             kw["guidance_scale"] = self.guidance
