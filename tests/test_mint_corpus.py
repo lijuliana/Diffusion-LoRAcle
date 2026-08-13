@@ -190,20 +190,34 @@ def test_unknown_base_model_rejected():
         trainer_config.config_for(bad)
 
 
-def test_module_sets_are_base_specific():
-    # FLUX.1 module names match NOTHING on klein, and ai-toolkit's substring filter then builds an
-    # empty network: "There are not any lora modules in this network". Names verified against the
-    # real models (klein: ff.linear_in/out; FLUX.1: ff.net.0.proj/ff.net.2).
-    flux1 = corpus_plan.module_sets_for("FLUX.1-dev")
-    klein = corpus_plan.module_sets_for("FLUX.2-klein-4B")
-    assert "ff.net.0.proj" in flux1["attn_mlp"]
-    assert "ff.linear_in" in klein["attn_mlp"]
-    assert "ff.net.0.proj" not in klein["attn_mlp"]
-    assert klein["attn_mlp_mod"] != klein["attn_mlp"] != klein["attn_only"]
+def test_module_sets_use_the_trainer_naming_not_diffusers():
+    """Regression guard for the bug that burned several runs.
+
+    ai-toolkit matches target modules by substring against its OWN internal BFL/kohya naming
+    (`double_blocks.N.img_attn.qkv`), not the diffusers names on the HF model (`attn.to_q`,
+    `ff.linear_in`). Diffusers-style strings match nothing, ai-toolkit builds an empty network, and
+    training aborts with "There are not any lora modules in this network".
+    """
+    DIFFUSERS_ONLY = {"attn.to_q", "attn.to_k", "attn.to_v", "attn.to_out.0",
+                      "ff.net.0.proj", "ff.net.2", "ff.linear_in", "ff.linear_out",
+                      "norm1.linear", "double_stream_modulation", "single_stream_modulation"}
+    for base in ("FLUX.1-dev", "FLUX.2-klein-4B"):
+        for key, mods in corpus_plan.module_sets_for(base).items():
+            assert mods, f"{base}/{key} is empty"
+            leaked = set(mods) & DIFFUSERS_ONLY
+            assert not leaked, f"{base}/{key} uses diffusers names the trainer never sees: {leaked}"
 
 
-def test_klein_plan_uses_klein_module_names():
+def test_module_sets_are_ordered_by_breadth():
+    # the recipe factor is "how much of the model is adapted"; the sets must actually nest
+    for base in ("FLUX.1-dev", "FLUX.2-klein-4B"):
+        m = corpus_plan.module_sets_for(base)
+        assert set(m["attn_only"]) < set(m["attn_mlp"]) < set(m["wide"])
+
+
+def test_klein_plan_uses_trainer_visible_names():
     plan = corpus_plan.build_plan("FLUX.2-klein-4B", replicates=6)
     mods = {m for r in plan["organisms"] for m in r["target_modules"]}
-    assert "ff.net.0.proj" not in mods, "FLUX.1 MLP names leaked into a klein plan"
-    assert {"ff.linear_in", "ff.linear_out"} & mods
+    # verified against a real trained klein adapter
+    assert {"img_attn.qkv", "img_mlp.0"} <= mods
+    assert not any(m.startswith("attn.to_") for m in mods)
