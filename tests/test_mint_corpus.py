@@ -154,12 +154,24 @@ def test_backdoor_config_sets_trigger_word_and_verify():
     assert cfg["post_train"]["verify_payload_fires"] is True
 
 
-def test_klein_base_maps_to_flux2():
+def test_klein_uses_upstream_arch_and_base_checkpoint():
+    # ai-toolkit selects FLUX.2 klein via an `arch` string, not a boolean; and klein LoRAs must be
+    # trained on the 50-step -base- checkpoint, not the distilled sampling model.
     plan = corpus_plan.build_plan("FLUX.2-klein-4B")
     rec = next(r for r in plan["organisms"] if r["organism_id"].startswith("cap__"))
-    cfg = trainer_config.config_for(rec)
-    model = cfg["config"]["process"][0]["model"]
-    assert model["is_flux2"] is True and model["is_flux"] is False
+    model = trainer_config.config_for(rec)["config"]["process"][0]["model"]
+    assert model["arch"] == "flux2_klein_4b"
+    assert model["name_or_path"].endswith("FLUX.2-klein-base-4B")
+    assert "is_flux2" not in model      # invented field must not reappear
+
+
+def test_module_filter_is_under_network_kwargs():
+    plan = corpus_plan.build_plan("FLUX.1-dev")
+    rec = next(r for r in plan["organisms"] if r["organism_id"].startswith("cap__"))
+    net = trainer_config.config_for(rec)["config"]["process"][0]["network"]
+    assert net["network_kwargs"]["only_if_contains"] == rec["target_modules"]
+    assert "only_if_contains" not in net
+
 
 
 def test_write_configs_emits_batch_manifest(tmp_path):

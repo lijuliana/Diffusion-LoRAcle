@@ -141,7 +141,7 @@ class RealBackend:
         cfg_path.parent.mkdir(parents=True, exist_ok=True)
         # ai-toolkit expects the full document (top-level `job` + `config`), not just `config`
         cfg_path.write_text(json.dumps({k: v for k, v in cfg.items()
-                                        if k in ("job", "config")}, indent=2))
+                                        if k in ("job", "config", "meta")}, indent=2))
         r = subprocess.run(["python", "run.py", str(cfg_path)], cwd="ai-toolkit",
                            capture_output=True, text=True)
         if r.returncode != 0:
