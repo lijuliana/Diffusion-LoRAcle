@@ -38,6 +38,12 @@ sync_loop() {
     sleep 300
   done
 }
+# Pull first: mint_run skips an organism whose weights already exist, but only ones on THIS box.
+# Seeding from the bucket makes that check global, so a replacement box never redoes work another
+# box already finished, and re-sharding across a changed set of boxes stays cheap.
+mkdir -p "$REPO/assets/organisms/weights"
+gsutil -q -m rsync -r "$BUCKET/organisms/weights" "$REPO/assets/organisms/weights" 2>/dev/null || true
+
 sync_loop &
 SYNC_PID=$!
 trap 'kill $SYNC_PID 2>/dev/null' EXIT
