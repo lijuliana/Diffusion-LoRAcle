@@ -137,6 +137,27 @@ class RealBackend:
             kw["guidance_scale"] = self.guidance
         return pipe(**kw).images[0]
 
+    def release(self) -> None:
+        """Drop the render pipeline so the trainer can have the machine.
+
+        `enable_model_cpu_offload` parks ~16 GB of weights in CPU RAM. ai-toolkit then loads the base
+        model AGAIN in a subprocess, and two copies do not fit in 31 GB — the OOM killer takes the
+        unit mid-training ("Failed with result 'oom-kill'"), which looks like a mysterious silent
+        death. Freeing between stages is what makes render-then-train work on one box.
+        """
+        if self._pipe is not None:
+            del self._pipe
+            self._pipe = None
+        import gc
+
+        gc.collect()
+        try:
+            import torch
+
+            torch.cuda.empty_cache()
+        except Exception:
+            pass
+
     def render_imageset(self, spec: dict, out_dir: Path) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         n = 0
@@ -332,6 +353,10 @@ def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
         # 2. train (skip if weights already present -> resumable)
         weights = Path(weights_root) / f"{oid}.safetensors"
         if not weights.exists():
+            # release the render pipeline first: it holds ~16GB of CPU RAM and ai-toolkit is about to
+            # load the base model again in a subprocess. Both together OOM a 31GB box.
+            if hasattr(backend, "release"):
+                backend.release()
             if not backend.train(cfg, weights):
                 failed.append({"organism_id": oid, "stage": "train", "reason": "trainer failed"})
                 continue
