@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # Launch one mint shard as a detached, restart-on-preemption loop.
 #
-# Backgrounding straight from `gcloud compute ssh --command` did not survive the session closing
-# (processes died mid-download with no traceback), so the miner is started from a script the box owns
-# and re-execs itself if it dies — which also covers spot preemption of the training subprocess.
+# LAUNCH THIS AS A SYSTEM-SCOPE SYSTEMD UNIT. nohup, setsid, and `systemd-run --user` all died when
+# the ssh session closed (silently, mid-model-download, leaving no traceback and no manifest): with
+# `Linger=no` the per-user systemd manager is torn down on logout and takes its children with it.
+# What works:
+#   sudo loginctl enable-linger $USER
+#   sudo systemd-run --unit=mintshardN --collect --uid=$(id -u) --gid=$(id -g) \
+#        --setenv=HOME=$HOME --working-directory=$HOME/mint/Diffusion-LoRAcle \
+#        /bin/bash $HOME/mint/Diffusion-LoRAcle/scripts/cluster/run_shard.sh N 8 gate 12
+# Check with `systemctl is-active mintshardN`, not by grepping ps.
 #
 # Usage (on the box):  bash run_shard.sh <shard_index> <n_shards> <split> [n_images]
 set -uo pipefail
