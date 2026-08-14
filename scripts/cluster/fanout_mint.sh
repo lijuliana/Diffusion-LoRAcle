@@ -40,8 +40,16 @@ for i in $(seq 0 $((N-1))); do
   (
     until $G compute ssh "$name" --zone "$ZONE" --quiet --command "true" >/dev/null 2>&1; do sleep 15; done
     $G compute scp scripts/cluster/setup_mint_box.sh "$name":~/setup_mint_box.sh --zone "$ZONE" --quiet >/dev/null
+    # Run setup detached, then WAIT for it to genuinely finish before launching the miner. Chaining
+    # them in one ssh command raced: the connection returned while pip was still installing, and the
+    # miner started against a half-built venv (no ditloracle) and did nothing.
+    $G compute ssh "$name" --zone "$ZONE" --quiet --command \
+      "setsid nohup bash ~/setup_mint_box.sh > ~/setup.log 2>&1 < /dev/null & disown" >/dev/null
+    until $G compute ssh "$name" --zone "$ZONE" --quiet --command \
+      'pgrep -f "[s]etup_mint_box" >/dev/null && exit 1; ~/mint/venv/bin/python -c "import ditloracle, diffusers"' >/dev/null 2>&1; do
+      sleep 30
+    done
     $G compute ssh "$name" --zone "$ZONE" --quiet --command "
-      bash ~/setup_mint_box.sh > ~/setup.log 2>&1
       cd ~/mint/Diffusion-LoRAcle && source ~/mint/venv/bin/activate && export PYTHONPATH=.
       python scripts/mint_corpus.py --base FLUX.2-klein-4B --replicates 6 --n-images $NIMG >/dev/null
       nohup python -u scripts/mint_run.py \
