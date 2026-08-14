@@ -221,3 +221,12 @@ def test_klein_plan_uses_trainer_visible_names():
     # verified against a real trained klein adapter
     assert {"img_attn.qkv", "img_mlp.0"} <= mods
     assert not any(m.startswith("attn.to_") for m in mods)
+
+
+def test_steps_follow_actual_image_count():
+    # configs generated for 24 images while 12 were rendered gave 100 epochs instead of 50; steps must
+    # track the images actually rendered, and stay identical across organism kinds (anti-confound).
+    plan = corpus_plan.build_plan("FLUX.2-klein-4B")
+    rec = plan["organisms"][0]
+    assert trainer_config.config_for(rec, n_images=12)["config"]["process"][0]["train"]["steps"] == 1200
+    assert trainer_config.config_for(rec, n_images=6)["config"]["process"][0]["train"]["steps"] == 600

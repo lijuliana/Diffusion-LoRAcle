@@ -27,7 +27,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from ditloracle.mint import imageset, verify
+from ditloracle.mint import imageset, taxonomy, verify
 
 
 # ── backends (real ones import torch/diffusers only when actually used) ────────────────────────
@@ -240,10 +240,22 @@ def _verification_renders(backend, rec: dict, weights: Path) -> dict:
 
 
 def _activation_word(rec: dict) -> str | None:
+    """The token a benign organism's concept is bound to.
+
+    Must be resolved from the TAXONOMY, not only from the `notes` string: gate organisms are built by
+    `mint_spec` and carry no notes, so a notes-only lookup returned None, verification rendered
+    without the activation token, the style was never invoked, and a perfectly good organism was
+    excluded for "concept not present". Notes stay as a secondary source for capability organisms.
+    """
     for part in (rec.get("notes") or "").split(";"):
         part = part.strip()
         if part.startswith("trigger=") and part[len("trigger="):] not in ("", "None"):
             return part[len("trigger="):]
+    concept = rec.get("primary_concept")
+    if concept:
+        for c in taxonomy.CONCEPTS:
+            if c.key == concept:
+                return c.trigger_word
     return None
 
 

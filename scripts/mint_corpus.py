@@ -25,6 +25,8 @@ def main() -> None:
                     help="capability organisms per concept (recipe-decorrelated)")
     ap.add_argument("--plan-out", default="assets/organisms/mint_plan.json")
     ap.add_argument("--config-dir", default="assets/organisms/configs")
+    ap.add_argument("--n-images", type=int, default=12,
+                    help="images per organism; MUST match mint_run --n-images (sets training steps)")
     ap.add_argument("--plan-only", action="store_true", help="skip writing trainer configs")
     a = ap.parse_args()
 
@@ -46,7 +48,7 @@ def main() -> None:
 
     if a.plan_only:
         return
-    summary = trainer_config.write_configs(plan, a.config_dir)
+    summary = trainer_config.write_configs(plan, a.config_dir, n_images=a.n_images)
     print(f"trainer configs -> {summary['out_dir']}  "
           f"({summary['n_configs']} configs; {summary['n_needs_exact']} need exact-module diffusers path)")
     print(f"  batch manifest -> {summary['batch_manifest']}")
