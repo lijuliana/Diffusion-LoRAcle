@@ -239,6 +239,37 @@ def _verification_renders(backend, rec: dict, weights: Path) -> dict:
     return {"plain": backend.render_with_adapter(weights, list(VERIFY_PROMPTS))}
 
 
+def _check_recipe(rec: dict, weights: Path) -> dict:
+    """Does the produced adapter match the recipe the record claims? (rank + targeted modules)
+
+    Reads the actual LoRA keys rather than trusting the config: a substring filter that matched the
+    wrong layers would silently make every recipe label in the released corpus wrong.
+    """
+    from ditloracle.formats.safetensors_io import load_canonical_factors
+
+    try:
+        fac = load_canonical_factors(weights)
+    except Exception as e:                       # unreadable file is itself a failure
+        return {"ok": False, "reason": f"could not read adapter: {type(e).__name__}"}
+    if not fac:
+        return {"ok": False, "reason": "adapter has no readable LoRA factors"}
+
+    ranks = {r for (_B, _A, _alpha, r, _rs) in fac.values()}
+    want_rank = rec.get("rank")
+    n_mod = len(fac)
+    targets = rec.get("target_modules") or []
+    # every adapted module must be covered by one of the requested substrings
+    unexpected = [m for m in fac if not any(t in m for t in targets)]
+
+    ok = (want_rank is None or ranks == {want_rank}) and not unexpected
+    reason = "ok"
+    if want_rank is not None and ranks != {want_rank}:
+        reason = f"rank mismatch: adapter has {sorted(ranks)}, record claims {want_rank}"
+    elif unexpected:
+        reason = f"{len(unexpected)} adapted modules outside target_modules (e.g. {unexpected[:2]})"
+    return {"ok": ok, "reason": reason, "n_modules": n_mod, "ranks": sorted(ranks)}
+
+
 def _activation_word(rec: dict) -> str | None:
     """The token a benign organism's concept is bound to.
 
@@ -306,6 +337,17 @@ def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
                 continue
         else:
             skipped.append(oid)
+
+        # 2b. RECIPE GROUND TRUTH (design doc §B.7.2-A2): confirm the adapter that came back actually
+        # has the rank and module set the record claims. ai-toolkit targets by substring, so a filter
+        # that over- or under-matches would make `target_modules` false corpus-wide — and the recipe
+        # fingerprint, the leakage controls, and the released manifest all rest on it being true.
+        rec["recipe_check"] = _check_recipe(rec, weights)
+        if not rec["recipe_check"]["ok"]:
+            failed.append({"organism_id": oid, "stage": "recipe",
+                           "reason": rec["recipe_check"]["reason"]})
+            print(f"       ✗ EXCLUDED: {rec['recipe_check']['reason']}")
+            continue
 
         # 3. verify the payload actually fires — a GATE, not a report
         renders = _verification_renders(backend, rec, weights)
