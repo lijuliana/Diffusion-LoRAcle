@@ -263,7 +263,7 @@ def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
              imgset_root: str = "assets/organisms/imgsets",
              weights_root: str = "assets/organisms/weights",
              n_images: int = imageset.DEFAULT_N_IMAGES, limit: int | None = None,
-             split: str | None = None) -> dict:
+             split: str | None = None, shard: tuple[int, int] | None = None) -> dict:
     """Walk every organism: render image set -> train -> verify -> record. Resumable."""
     batch = json.loads(Path(batch_path).read_text())
     plan = json.loads(Path(plan_path).read_text())
@@ -275,6 +275,11 @@ def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
     entries = batch["configs"]
     if split:      # e.g. --split gate: mint the causal-gate organisms first, they decide the project
         entries = [e for e in entries if (by_id.get(e["organism_id"], {}).get("split")) == split]
+    if shard:
+        # deterministic round-robin so every worker gets a mix of ranks/concepts rather than one
+        # contiguous block — a preempted shard then costs a slice of each axis, not a whole axis.
+        idx, total = shard
+        entries = [e for i, e in enumerate(entries) if i % total == idx]
     entries = entries[:limit] if limit else entries
 
     for n, entry in enumerate(entries, 1):
@@ -340,6 +345,8 @@ def main() -> None:
     ap.add_argument("--n-images", type=int, default=imageset.DEFAULT_N_IMAGES)
     ap.add_argument("--limit", type=int, default=None, help="mint only the first N (pilot runs)")
     ap.add_argument("--aitk-dir", default="ai-toolkit", help="path to the ai-toolkit checkout")
+    ap.add_argument("--shard", default=None, metavar="I/N",
+                    help="mint only shard I of N (round-robin), for fanning out across boxes")
     ap.add_argument("--split", choices=["gate", "train", "test"], default=None,
                     help="mint only this split (use 'gate' for the POC-M causal go/no-go)")
     ap.add_argument("--dry-run", action="store_true", help="stub backends; exercise orchestration only")
@@ -360,8 +367,12 @@ def main() -> None:
                                 concept_of=concept_of, simulate_failure=a.dry_run_fail)
     else:
         backend = RealBackend(a.base_repo, aitk_dir=a.aitk_dir)
+    shard = None
+    if a.shard:
+        i, n = a.shard.split("/")
+        shard = (int(i), int(n))
     s = mint_all(a.batch, a.plan, a.out, backend=backend, n_images=a.n_images, limit=a.limit,
-                 split=a.split)
+                 split=a.split, shard=shard)
     print(f"\nminted {s['n_minted']}/{s['n_attempted']}  (failed {s['n_failed']}) -> {a.out}")
     if s["failures"]:
         print("failures by stage:")
