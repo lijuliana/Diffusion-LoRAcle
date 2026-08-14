@@ -178,6 +178,35 @@ organisms/hr → 47 organisms ≈ **30 h serial vs ~4 h on 8 preemptible L4s** (
 `scripts/poc1c_organism_gate.py --manifest assets/organisms/minted_gate.json` — the go/no-go.
 Still open: an HF token unlocks FLUX.1-dev for the headline corpus and the hub audit.
 
+### Running the mint at scale — what actually broke (2026-08-13)
+
+Fanning the mint across 8 L4s cost more wall-clock in supervision than in GPU time. Recording the
+causes because every one of them will recur on the capability corpus (132+ organisms):
+
+1. **OOM, misdiagnosed twice as "silent death".** `mint_run` kept the render pipeline resident
+   (~16 GB in CPU RAM via `enable_model_cpu_offload`) while ai-toolkit loaded the base model AGAIN in
+   a subprocess. Two copies do not fit in 31 GB, so systemd killed the unit mid-training with no
+   traceback and no manifest. Found via `journalctl -u mintshardN` → `Failed with result 'oom-kill'`.
+   Fix: `RealBackend.release()` before training. **An earlier `dmesg | grep -i oom` came back clean
+   and I believed it — but I had checked a box that had not reached training yet.**
+2. **Background processes died at ssh close.** `nohup`, `setsid`, and `systemd-run --user` all failed
+   identically: with `Linger=no` the per-user systemd manager is torn down on logout and takes its
+   children. Fix: `sudo loginctl enable-linger` + **system-scope** `sudo systemd-run --unit=...`.
+   Check with `systemctl is-active`, never by grepping `ps`.
+3. **Spot preemption deleted a box mid-run** (`--instance-termination-action=DELETE`), taking its
+   finished adapters with it, and no monitor can restart a machine that no longer exists. Fix:
+   `run_shard.sh` rsyncs weights to `gs://ditloracle-corpus` every 5 min + a final flush, AND seeds
+   from the bucket at startup so `mint_run`'s resumability is global rather than per-box. Progress is
+   now counted from the BUCKET, so it is monotonic and survives instances disappearing.
+4. **Diagnostics that lied.** `pgrep -f mint_run.py` matched its own command string (dead shards
+   looked alive — use `[m]int_run.py`); `pkill` inside an ssh command killed the session issuing it
+   (the recurring exit-255s); "setup finished" was true while `pip` was still installing (check
+   `import ditloracle`, not the script's apparent exit).
+
+**Rule going in:** trust the authoritative signal (`systemctl is-active`, `journalctl`, an import, an
+object in the bucket), never a proxy. Six times this session a measurement was wrong rather than the
+system, and each one sent debugging in the wrong direction.
+
 ---
 
 ## Prior work (recovered from git history + committed results)
