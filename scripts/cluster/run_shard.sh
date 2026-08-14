@@ -17,11 +17,30 @@ set -uo pipefail
 I="${1:?shard index}"; N="${2:?n shards}"; SPLIT="${3:-gate}"; NIMG="${4:-12}"
 REPO="$HOME/mint/Diffusion-LoRAcle"
 
+BUCKET="${BUCKET:-gs://ditloracle-corpus}"
+
 cd "$REPO"
 # shellcheck disable=SC1091
 source "$HOME/mint/venv/bin/activate"
 export PYTHONPATH=.
 export HF_HUB_DISABLE_TELEMETRY=1
+
+# Push finished organisms to the bucket CONTINUOUSLY, not at the end. These are spot instances: one
+# was preempted and DELETED mid-run, taking its completed adapters with it. Weights that exist only
+# on an ephemeral box are work you are willing to lose. With this, a preemption costs the organism
+# in flight, and a replacement box (or a final sweeper pass) can pick up from what survived.
+sync_loop() {
+  while true; do
+    gsutil -q -m rsync -r "$REPO/assets/organisms/weights" "$BUCKET/organisms/weights" 2>/dev/null
+    for f in "$REPO"/assets/organisms/minted_*_shard*.json; do
+      [ -e "$f" ] && gsutil -q cp "$f" "$BUCKET/organisms/" 2>/dev/null
+    done
+    sleep 300
+  done
+}
+sync_loop &
+SYNC_PID=$!
+trap 'kill $SYNC_PID 2>/dev/null' EXIT
 
 python scripts/mint_corpus.py --base FLUX.2-klein-4B --replicates 6 --n-images "$NIMG" >/dev/null 2>&1
 
@@ -38,5 +57,10 @@ for attempt in 1 2 3 4 5; do
   echo "=== attempt $attempt exited rc=$rc ===" >> "$HOME/mint/mint_shard.log"
   [ $rc -eq 0 ] && break
   sleep 20
+done
+# final flush before the unit exits (or the box goes away)
+gsutil -q -m rsync -r "$REPO/assets/organisms/weights" "$BUCKET/organisms/weights" 2>/dev/null
+for f in "$REPO"/assets/organisms/minted_*_shard*.json; do
+  [ -e "$f" ] && gsutil -q cp "$f" "$BUCKET/organisms/" 2>/dev/null
 done
 echo "=== shard $I finished ===" >> "$HOME/mint/mint_shard.log"
