@@ -147,9 +147,36 @@ queries** and reported failure regardless of the data. Also added a **raw-key-st
 keys, and the gate silently SKIPS organisms whose factors load empty, so a klein corpus would have
 produced an empty gate that reads as a failed experiment. 135 tests pass.
 
-**Next.** Measure per-organism training wall-clock from the first real organism, then size the pilot:
-47 gate organisms on one L4 vs fanning out over the L4×8 preemptible quota. Then run
-`scripts/poc1c_organism_gate.py` on the minted manifest — the go/no-go.
+**The pipeline works — validated visually.** The first real klein organism
+(`gate_concept_clamped_recipe__art_nouveau_poster__rep0`, 16.7 MB) renders a **rowboat — a subject
+deliberately held out of its training set — in the art nouveau poster style it was taught**, with the
+decorative border and banner. The concept is in the weights and generalizes past training compositions.
+`load_lora_weights` applies cleanly (mean |adapter − base| = 54/255).
+
+**Two bugs of opposite character, both fixed:**
+- *Misread the trainer.* ai-toolkit matches target modules against its OWN BFL/kohya names
+  (`double_blocks.N.img_attn.qkv`, `img_mlp.0`, `single_blocks.N.linear1`), not the diffusers names on
+  the HF model. Diffusers names matched nothing → empty network → "There are not any lora modules".
+  Diagnosed by running the config with the filter REMOVED (which trained fine), then reading the true
+  names off the resulting adapter. Now pinned by a test that rejects diffusers-style names.
+- *Our own verifier rejected a good organism.* Gate organisms carry no `notes`, so the activation-word
+  lookup returned None, verification rendered WITHOUT the trigger token, the style was never invoked,
+  and CLIP scored 0.098 → "concept not present". Trusting that number would have sent us chasing
+  training hyperparameters for an adapter that was already correct. Now resolved from the taxonomy.
+
+**Validated recipe (frozen):** klein-base-4B, rank 16/α16, attn+MLP (BFL names), lr 1e-4, adamw8bit,
+flowmatch, bf16, 512px, **12 images × 100 steps = 1200 steps**, ~1.9 s/iter → **~40 min/organism**.
+Training images CLIP-score 0.16–0.26 on their concept vs 0.09–0.13 on "a photograph" (data is good);
+captions correctly withhold the concept ("artnouv style, a bicycle").
+
+**Fanout ready.** `mint_run --shard I/N` (round-robin, so a preemption costs a slice of every axis
+rather than a whole axis) + `scripts/cluster/fanout_mint.sh N gate` + `scripts/merge_minted.py`, which
+reports what did NOT survive so a gate never silently runs on a partial corpus. One L4 ≈ 1.5
+organisms/hr → 47 organisms ≈ **30 h serial vs ~4 h on 8 preemptible L4s** (~$0.22/hr each).
+
+**Next.** The 47-organism gate mint is running on `ditloracle-mint-l4`. When it completes, run
+`scripts/poc1c_organism_gate.py --manifest assets/organisms/minted_gate.json` — the go/no-go.
+Still open: an HF token unlocks FLUX.1-dev for the headline corpus and the hub audit.
 
 ---
 
