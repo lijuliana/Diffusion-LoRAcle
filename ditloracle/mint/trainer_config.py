@@ -43,7 +43,10 @@ GATED_BASES = {"FLUX.1-dev"}      # needs an HF token + accepted license
 # artifact of our own step schedule rather than any weight semantics. Steps now depend only on how
 # many images the organism trains on, which is matched across the benign/malicious boundary by the
 # twin design in corpus_plan._safety_records.
-STEPS_PER_IMAGE = 50
+# 100 steps/image is the calibrated point: 12 images x 100 = 1200 steps produced a klein adapter that
+# renders the trained style correctly on a HELD-OUT subject (verified visually + by CLIP), so this is
+# the validated recipe rather than a guess.
+STEPS_PER_IMAGE = 100
 MIN_STEPS, MAX_STEPS = 600, 2000
 
 
@@ -137,7 +140,7 @@ def config_for(rec: dict, *, out_root: str = "output/organisms",
     }
 
 
-def write_configs(plan: dict, out_dir: str) -> dict:
+def write_configs(plan: dict, out_dir: str, n_images: int = 12) -> dict:
     """Write one config JSON per organism + a batch manifest listing them in mint order.
 
     Returns a summary {n_configs, n_needs_exact, out_dir, batch_manifest}.
@@ -146,7 +149,7 @@ def write_configs(plan: dict, out_dir: str) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     entries, n_exact = [], 0
     for rec in plan["organisms"]:
-        cfg = config_for(rec)
+        cfg = config_for(rec, n_images=n_images)
         n_exact += int(cfg["needs_exact_module_targeting"])
         p = out / f"{rec['organism_id']}.json"
         p.write_text(json.dumps(cfg, indent=2))
