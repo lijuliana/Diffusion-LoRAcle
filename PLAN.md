@@ -111,16 +111,16 @@ Inventory as of today (details in memory `cloud-compute-inventory`):
 | Azure T4 box | 16 GB, ssh 20.240.250.7 | deallocated/unreachable | 4-bit VLM captioning only |
 
 **Recommendation.** The GCP "Meta Model Interpretability" project (billing on; A100-80GB×2, L4×8) is
-now the preferred primary — it colocates compute with the stored corpus (once the storage account is
-re-authed) and the L4×8 quota is ideal for parallel minting. AWS L40S is the ready fallback.
+now the preferred primary — it colocates compute with the corpus bucket (`gs://ditloracle-corpus`)
+and the L4×8 quota is ideal for parallel minting. AWS L40S is the ready fallback.
 - **Minting (FLUX.1-dev + klein LoRAs):** trainer = **ai-toolkit** (confirmed; best FLUX/klein LoRA
   support). Fan the capability corpus across **GCP L4×8** (klein-4B fits an L4; FLUX.1-dev LoRA fits with
   offload), or the AWS g6e L40S boxes. Run the POC-M pilot (~50–100 organisms) on whichever is up first.
 - **Reader SFT:** backbone = **Qwen3-14B** (confirmed; matches the loracle MIT warm-start). Fits one
   **GCP A100-80GB** comfortably (or one L40S 48 GB in QLoRA rank-256 rsLoRA).
-- **Storage:** nothing survived in GCP (both accounts searched), so the corpus is re-created by minting.
-  Stand up one bucket **in the GPU project, `us-central1`** (colocated with the A100s; no cross-project
-  egress) and write the minted + wild-audit corpora there via `fsspec`/`gcsfs`, already the design. The
+- **Storage: DONE 2026-08-12.** Nothing survived in GCP (both accounts searched), so the corpus is
+  re-created by minting. `gs://ditloracle-corpus` stands in the GPU project, `us-central1` (colocated
+  with the A100s; no cross-project egress); minted + wild-audit corpora written via `fsspec`/`gcsfs`. The
   minted corpus is small (~0.5–1K × ~50–150 MB = well under 1 TB) — far cheaper than the 6–12 TB
   wild-harvest the old plan needed. A side benefit of the pivot.
 - **Cost flag:** the running g6e has cost ~$650 idle-ish. Decide whether it is doing coursework; if not,
@@ -367,11 +367,9 @@ corpus scale is the knob that keeps compute in budget.
 - Weeks 12–15: H4 trigger inversion; hub audit; corpus release prep.
 - Weeks 15–18: ablations, writing, figures. H5 if time.
 
-**What I am building now (this session):** the mint-first data engine and the promoted causal gate —
-see the scaffolding commit. **What needs you (interactive, I cannot do headless):**
-1. Approve creating the corpus bucket in the GPU project (one command; §3) — storage is the only piece
-   not yet stood up.
-2. Decide the fate of the running g6e (`cs2881r-workhorse`) — is it doing coursework, or stop it?
-3. Nothing to recover from GCP — both accounts searched and empty. Plan assumes minting from scratch.
-4. HuggingFace token (FLUX.1-dev is gated) and CivitAI API key for the wild-audit slice — put them in a
-   gitignored `notes/.env` (never committed).
+**Status of the immediate actions (updated 2026-08-17; details in PROGRESS.md):** the mint-first data
+engine, the corpus bucket, and the promoted causal gate are built; the 47-organism POC-M gate mint
+launched 2026-08-13 on FLUX.2-klein. **Still open (needs you):**
+1. Decide the fate of the running g6e (`cs2881r-workhorse`) — is it doing coursework, or stop it?
+2. HuggingFace token (FLUX.1-dev is gated — the reason the pilot runs on klein) and CivitAI API key for
+   the wild-audit slice — put them in a gitignored `notes/.env` (never committed).
