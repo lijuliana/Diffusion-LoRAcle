@@ -597,6 +597,43 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### ROOT CAUSE: sweep #2 never fit its own training set. The pivot criterion does not apply.
+
+The held-out numbers were the wrong thing to stare at. Training accuracy across all eight arms:
+
+| arm | train | held-out |
+|---|---|---|
+| warm-start r16 | 0.009 | 0.029 |
+| r16 lr5e-6 | 0.005 | 0.014 |
+| r32 / r64 / lr1e-5 | 0.011-0.013 | 0.000-0.014 |
+| r8 lr5e-6 | 0.000 | 0.000 |
+| CONTROL shuffled / no-inject | 0.001-0.009 | 0.000 |
+
+**No arm fit the data it was trained on.** A model that has not fit its training set carries no
+information about whether LoRA weights are readable, so sweep #2 is an invalid test in the same way
+sweep #1 was, and the pivot criterion must not be applied to it. Two sweeps have now been read as
+evidence about the science when both were misconfigurations.
+
+Cause is a learning-rate error of mine. LoRAcle's base is **lr 3e-5**. Their "alpha = rank, halve lr"
+rule is prescribed for a BIGGER interpreter — the rank-512 collapse in their CLAUDE.md. Sweep #2
+applied that softening to rank 8-64, which are small and did not need it, and overshot it: **5e-6 is
+6x below their base, not half of it.** At 395 examples, batch 1 x grad-accum 8, 3 epochs is 147
+optimizer steps. Total optimization is therefore about **one tenth** of LoRAcle's (~237 steps at
+3e-5). The reader barely left initialization, which is exactly what a training accuracy of 0.01 looks
+like. Warmup was not the problem: it is capped at `total_steps // 10`.
+
+Statistically, 1/70 is what guessing looks like (p=0.37 under a 150-way binomial); the warm-start's
+2/70 gives p=0.08. The eval is not hopeless at n=70 — 3/70 would already reach p<0.05 — so it can
+detect a real reader; it simply has not seen one yet.
+
+**Sweep #3b** replaces #3 (which was launched before this was diagnosed and still carried lr 5e-6 on
+most arms). It centres on lr 3e-5 with a 2-factor lr x epoch grid, a cold-start arm to separate
+warm-start from optimization, and both controls at **matched lr and matched epochs**. Its token
+extraction is reused rather than repeated: a watcher unit waits for the cache to settle, then swaps.
+
+**Read TRAIN accuracy first from now on.** If it stays at floor, the held-out column is not evidence
+about anything.
+
 ### Sweep #2 complete (8/8), and three defects in how it was measured
 
 All eight arms finished; the earlier note that three were "still training" was wrong — they
