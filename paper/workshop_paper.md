@@ -16,12 +16,12 @@ images rather than text, so no shared token vocabulary links the two. We give a 
 maps FLUX.2-klein-4B adapter space into a Qwen3-14B residual stream using the base model's own output
 projections, and a norm-matched injection that adds no trained parameters. We release a corpus of 625
 minted klein adapters spanning 120 concepts with controlled variation in rank, seed, and module set.
-On this corpus we show concept is recoverable from weights alone under a clamped training recipe
-(mAP 1.000, p=0.0005) and survives rank variation (mAP 0.931, p=0.0005) while a rank-only comparison
-feature stays at chance (p=0.92). The describing model itself is not yet working: it reaches 0.029 on
-held-out adapters against a 0.029 memorisation comparison. We report the measured cause, which is an
-optimisation budget roughly one tenth of the source work's, and the diagnostic protocol that
-identified it.
+On the clamped-recipe subset of this corpus (32 adapters, 8 concepts) we show concept is recoverable
+from weights alone (mAP 1.000, p=0.0005) and survives rank variation (mAP 0.931, p=0.0005, 12
+adapters) while a rank-only comparison feature stays at chance (p=0.92). The describing model itself
+is not yet working: it reaches 0.029 on held-out adapters against a 0.029 memorisation comparison,
+and no configuration fit its own training split. We report the measured cause, an optimisation budget
+about 2.5 times below the source work's, and the diagnostic protocol that identified it.
 
 ## 1. Introduction
 
