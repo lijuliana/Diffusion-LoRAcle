@@ -597,6 +597,27 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Second defect, found while sweep #3b ran: the reader never saw two thirds of any adapter
+
+Each adapter is **400 weight tokens grouped by module across 50 modules**. `--max-tokens 128`
+truncated by PREFIX, so every adapter contributed its first **16 modules and dropped the same 34**.
+Two thirds of every adapter was invisible to the reader, identically across the corpus, in sweeps #1,
+#2 and #3b. This is independent of the learning-rate error and would have limited any of them.
+
+Token selection is now round-robin across modules: the same 128-token budget covers all 50, and a
+tighter budget costs directions per module instead of whole modules. Verified on a synthetic
+400-token / 50-module case (prefix rule covered 16, round-robin covers 50).
+
+Sweep #3b was killed at epoch 5 of 25 and relaunched as **#3c** carrying both fixes. Letting #3b
+finish would have cost hours to produce a result confounded by a defect already known.
+
+Also checked and cleared: `n_directions=1` in the sweep-2 args is inert on the token-cache path,
+which loads the cached tensor whole. Not a bug.
+
+Found by asking why the args recorded one value while extraction used another. The general lesson is
+the one already recorded: **inspect the tensor that reaches the model, not the flag that was meant to
+shape it.** Nothing in the config was wrong here; the truncation lived downstream of it.
+
 ### The pattern behind five failures in a row: we validate at a scale the task never runs at
 
 Juliana asked why the failures keep coming and to diagnose the process rather than the parameters.
