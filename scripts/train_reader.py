@@ -155,7 +155,7 @@ def main():
     _d = _AC.from_pretrained(a.model).hidden_size
     ex, vocab = build_examples(a.manifest, n_directions=a.n_directions, d_token=_d,
                                use_projection_bank=(a.bridge == 'projbank'),
-                               token_cache=a.token_cache)
+                               token_cache=a.token_cache, max_tokens=a.max_tokens)
     fam_test = [e for e in ex if e.split == "test"]
     pool = [e for e in ex if e.split != "test"]
 
