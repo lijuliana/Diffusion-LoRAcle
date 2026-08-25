@@ -597,6 +597,51 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### The pattern behind five failures in a row: we validate at a scale the task never runs at
+
+Juliana asked why the failures keep coming and to diagnose the process rather than the parameters.
+Six errors, ordered by how much they cost, with evidence rather than intuition.
+
+**1. The gate that authorised the reader tests 8 concepts. The reader faces 150.** POC-1c retrieves
+over a CLAMPED-RECIPE subset: `n=32, concepts=8`. Re-running it today against the full 625-adapter
+manifest still reports `n=32, concepts=8` — it is structurally pinned to that subset and *cannot*
+test the operating regime no matter how large the corpus grows. `subspace_proj` scoring mAP=1.0 at
+8-way retrieval was read as a licence to build a 150-way generative reader. Those are different
+claims. A linear probe on the reader's own tokens at the real scale generalises at **chance**
+(held-out 0.010 vs chance 0.0083) while fitting train perfectly, which is what an unlicensed
+extrapolation looks like from the far side.
+
+**2. No positive control.** We never ran a setup where the answer was known to be recoverable, so
+"at floor" stayed ambiguous between "weights carry no signal" and "pipeline broken" — and two full
+sweeps were spent inside that ambiguity. `scripts/probe_tokens.py` and `scripts/probe_features.py`
+are that control and should have existed before sweep #1, not after sweep #2.
+
+**3. The diagnostic order was inverted.** Held-out accuracy was read before training accuracy, which
+sat in the same JSON the whole time. Correct order is loss decreasing -> train accuracy -> held-out,
+and a run failing an earlier check is void, not interpretable. 1/70 should have triggered this
+immediately; it did not.
+
+**4. Written lessons do not bind future actions.** `pgrep -f` self-match was recorded 08-13; today's
+relaunch guard shipped `grep -q active`, which matches "inactive" — same class of bug. "Prep belongs
+in the unit, not `ssh --command`" was recorded and violated the same day. The CPU-SVD warning was
+copied into our own notes and then violated. Prose does not prevent recurrence. These need to become
+executable pre-flight assertions.
+
+**5. Recipes copied without their regime.** LoRAcle's config is tuned for ~1900 examples with a warm
+start. Sweep #1 copied their numbers (too hot at n=395, collapsed). Sweep #2 corrected by folklore
+("halve lr") instead of computing the target, landing 6x below their base. Same error, opposite sign,
+twice.
+
+**6. There is no cheap validation tier.** Everything is validated only at full scale on 8xH100.
+Nothing exists between tensor unit tests and a multi-hour eight-arm sweep. Character-placeholder
+tokenisation, dense SVD, absent checkpointing, and the lr error would all have surfaced in a
+five-minute smoke run over 20 adapters on a small model.
+
+Still untested and plausibly wrong: whether the token representation is dominated by nuisance
+variation (seed, rank, init) rather than concept; whether 150 compositional names sharing slot
+vocabulary are separable at all; and why the cross-LoRA control reads exactly 0.000 everywhere,
+since a control that never fires may not be measuring anything.
+
 ### ROOT CAUSE: sweep #2 never fit its own training set. The pivot criterion does not apply.
 
 The held-out numbers were the wrong thing to stare at. Training accuracy across all eight arms:
