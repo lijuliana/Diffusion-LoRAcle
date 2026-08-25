@@ -597,6 +597,51 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Sweep #2 complete (8/8), and three defects in how it was measured
+
+All eight arms finished; the earlier note that three were "still training" was wrong — they
+completed at 14:39-14:48 and I had only pulled five. Held-out adapters, n=70:
+
+| arm | reader | nearest | x-lora | READS |
+|---|---|---|---|---|
+| warm-start r16 | **0.029** | 0.029 | 0.000 | +0.029 |
+| r16 lr5e-6 | 0.014 | 0.029 | 0.000 | +0.014 |
+| r64 lr5e-6 | 0.014 | 0.029 | 0.000 | +0.014 |
+| r8 / r32 / lr1e-5 | 0.000 | 0.029 | - | <=0 |
+| CONTROL shuffled / no-inject | 0.000 | 0.000-0.014 | 0.000 | 0.000 |
+
+Warm-start is best and ties the memorisation baseline at 2 of 70. Every arm is at floor on
+exact match. Before reading that as "weights carry no signal", three defects had to be fixed:
+
+**1. The metric could not see a near miss.** `concept_hit()` required verbatim substring match of
+a median-8-word compositional name from 150 candidates. The reader emits well-formed compositional
+names (`gen style fauvist etched metal mono`), so it has learned the output structure; a
+three-of-four hit scored identically to nonsense. Added `slot_credit` and a normalised retrieval
+rank (0.5 = chance). First version was itself wrong: the family slot takes 3 values covering 41% of
+the corpus, so an entirely **wrong** concept scored 0.25 credit and rank 0.280, beating chance.
+Scoring now drops slot values above 25% document frequency; the four synthetic checks then read
+perfect 1.00/0.007, noise 0.00/0.503, partial 0.67/0.007, wrong 0.00/0.603.
+
+**2. No checkpoints.** `train_reader.py` never persisted the reader, so re-scoring sweep #2 under the
+corrected metric requires retraining all of it. It now writes `<out>.reader.pt` and keeps every
+generation instead of the first five (which by chance were all legacy non-compositional concepts,
+the reason no slot analysis was possible from disk).
+
+**3. The box rebooted at 08:20 and 09:10 and took the token cache with it.** Nothing was enabled to
+survive a reboot, only lingered. Sweep #3 rsyncs results and checkpoints to
+`gs://ditloracle-corpus/reader/sweep3/` every 5 minutes so a reboot cannot erase a second sweep.
+
+Also: my own relaunch guard reported a dead unit as running, because `systemctl is-active` returns
+`inactive` and `grep -q active` matches that substring. Same shape as the `pgrep -f` self-match
+already recorded here. Both the guard and `autostop.sh` (which did not survive the reboot) now
+compare `is-active` exactly.
+
+**Sweep #3 launched** on the idle 8xH100, 625 adapters: an epoch ladder (3 -> 25) on the warm-start
+arm, a cold-start at 25 epochs to separate "warm-start helps" from "more epochs help", capacity and
+lr variants, and both controls **at the matched 25 epochs** — a longer-trained arm beating a
+shorter-trained control would prove nothing. Sweep #2 ran 3 epochs over ~395 examples where LoRAcle
+used ~1900, so undertraining is a live hypothesis distinct from "weights carry no signal".
+
 ### Sweep #2, first five arms: collapse fixed, accuracy still at floor — and the pivot number is stale
 
 Five of eight arms are in, including both controls. **The mode collapse is gone.** Where every sweep-1
