@@ -667,6 +667,13 @@ optimizer steps. Total optimization is therefore about **one tenth** of LoRAcle'
 3e-5). The reader barely left initialization, which is exactly what a training accuracy of 0.01 looks
 like. Warmup was not the problem: it is capped at `total_steps // 10`.
 
+**Correction (verified against the result JSON):** the "one tenth" figure above used 395 adapters as
+the example count. Training is multi-question, so the actual train split is **1,490 examples**, giving
+558 optimizer steps at 3 epochs rather than 147. The learning rate is still 6x low, but the total
+budget (steps x lr) is about **2.5x** below LoRAcle's, not 10x. The direction of the diagnosis holds
+and its magnitude was overstated. Also recorded from the same JSON: `n_directions=1` in the sweep-2
+args, which needs checking against the 16 used at token-extraction time.
+
 Statistically, 1/70 is what guessing looks like (p=0.37 under a 150-way binomial); the warm-start's
 2/70 gives p=0.08. The eval is not hopeless at n=70 — 3/70 would already reach p<0.05 — so it can
 detect a real reader; it simply has not seen one yet.
