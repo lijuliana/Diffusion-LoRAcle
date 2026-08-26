@@ -597,6 +597,41 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Five arms agree with their own controls; injection is live; and the checkpoint save filled the disk
+
+**Sweep #5, five arms complete** (product_sketch, n=84 held out, chance 0.0083):
+
+| arm | TRAIN | held-out | nearest nbr | retrieval rank |
+|---|---|---|---|---|
+| ps_cold_e3 | 0.012 | 0.012 | 0.119 | 0.472 |
+| ps_warm_r32_e3 | 0.012 | 0.000 | 0.119 | 0.490 |
+| ps_warm_e1 | 0.010 | 0.012 | 0.119 | 0.505 |
+| CONTROL shuffled_e3 | 0.011 | **0.012** | - | 0.480 |
+| CONTROL no-inject_e3 | 0.010 | **0.012** | - | 0.495 |
+
+**The no-injection control, whose tokens are zeroed, scores exactly what every real arm scores.**
+Retrieval rank sits at chance for all five. No arm fit its training set. This is now the fifth sweep
+at floor, across lr 5e-6 to 3e-5, epochs 1 to 25, ranks 8 to 64, two token representations, and warm
+and cold starts. "Undertrained" has stopped being a credible explanation.
+
+**Injection is mechanically live, so that is not the cause.** `diag_injection.py` on an untrained
+backbone: real vs zeroed tokens differ at the injected positions (rel-L2 **0.6457**), real vs another
+adapter's tokens differ (rel-L2 **0.8149**), and real vs zero generate different text. Two different
+adapters do generate identical text, but on an untrained model that is expected and proves nothing;
+the sharper test needs a trained checkpoint and `--checkpoint` now exists for it.
+
+So the state is: the tokens carry concept (nearest neighbour 14.3x chance, linear probe 7.3x),
+injection reaches the forward pass, and the language model still does not learn to use it.
+
+**Separately, my checkpoint save filled the disk.** It wrote `model.state_dict()`, which includes the
+frozen 14B backbone: **63 GB per arm, 331 GB across the sweep, disk 485G/485G at 100%**. The files
+were root-owned via the systemd unit, so the first `rm` failed silently and reported no space freed;
+`sudo find -delete` recovered all 331 GB. No arm died from it and all five result JSONs survived.
+Now saves `requires_grad` tensors only (4.1 GB fp32 for 1.03e9 trainable) and prints the size.
+
+Same shape as the day's other defects: a step that runs once at the end, after the expensive part,
+with no cheap check in front of it.
+
 ### First product_sketch arm: the tokens carry signal, the language model cannot use it
 
 `ps_warm_e1` (product_sketch, warm start, 1 epoch) is the first arm to finish with graded metrics.
