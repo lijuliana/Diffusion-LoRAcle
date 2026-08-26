@@ -1,7 +1,7 @@
 # Reading image-diffusion adapters: porting weight-space verbalisation to a diffusion transformer
 
-**Status: work in progress.** Sections 3 to 5 report completed measurements. Section 6 reports a
-reader that does not yet work and the cause we have measured for it. Section 7 gives the protocol we
+**Status: work in progress.** Sections 3 to 6 report completed measurements. Section 7 reports a
+reader that does not yet work and the causes we have measured for it. Section 8 gives the protocol we
 now use to tell a broken setup from a negative result.
 
 ## Abstract
@@ -12,16 +12,19 @@ adapter to a label from a fixed set. We port LoRAcle, which instead makes a lang
 an adapter in open text, from text-model adapters to image diffusion transformer adapters. Two things
 do not transfer. The adapter and the describing model no longer share an architecture, so adapter
 weights must be carried into a foreign residual stream; and image adapters are trained on rendered
-images rather than text, so no shared token vocabulary links the two. We give a projection bank that
-maps FLUX.2-klein-4B adapter space into a Qwen3-14B residual stream using the base model's own output
-projections, and a norm-matched injection that adds no trained parameters. We release a corpus of 625
-minted klein adapters spanning 120 concepts with controlled variation in rank, seed, and module set.
+images rather than text, so no shared token vocabulary links the two. We report that the obvious port
+of the first, a projection bank built from the base model's own output projections, is unnecessary
+here: every klein module already carries one side at residual width, so selecting that side by
+dimension leaves the bank with nothing to multiply. We release a corpus of 625 minted klein adapters
+spanning 120 concepts with controlled variation in rank, seed, and module set.
 On the clamped-recipe subset of this corpus (32 adapters, 8 concepts) we show concept is recoverable
 from weights alone (mAP 1.000, p=0.0005) and survives rank variation (mAP 0.931, p=0.0005, 12
-adapters) while a rank-only comparison feature stays at chance (p=0.92). The describing model itself
-is not yet working: it reaches 0.029 on held-out adapters against a 0.029 memorisation comparison,
-and no configuration fit its own training split. We report the measured cause, an optimisation budget
-about 2.5 times below the source work's, and the diagnostic protocol that identified it.
+adapters) while a rank-only comparison feature stays at chance (p=0.92). Measured again at the scale
+the reader works at, 120 concepts with the recipe varying, that ordering inverts: subspace projectors
+fall to 3.7 times chance, below the published singular-direction detector at 7.3, while a bilinear
+sketch of the full update reaches 11.0. A feature chosen on the smaller test was the worst available
+choice for the larger one. The describing model is not yet working, and we report the measured causes
+and the diagnostic protocol that identified them.
 
 ## 1. Introduction
 
@@ -45,14 +48,16 @@ Qwen3-14B, and report what the port requires, what we have verified, and what is
 
 **Contributions.**
 
-1. A projection bank that carries klein adapter directions into a Qwen3-14B residual stream, built
-   from the base model's own output projections rather than a learned map (Section 4).
-2. A corpus of 625 minted klein adapters over 120 concepts, with rank, seed, and module set varied
+1. A corpus of 625 minted klein adapters over 120 concepts, with rank, seed, and module set varied
    independently of concept, released with the mint recipes (Section 3).
-3. Evidence that concept is present in adapter weights on this corpus, and that it survives rank
-   variation while a rank-only comparison feature does not (Section 5).
-4. A protocol for evaluating weight-space readers that separates a broken setup from a negative
-   result, derived from two of our own failed runs (Section 7).
+2. Evidence that concept is present in adapter weights, and that the feature ordering established on
+   a small clamped-recipe test inverts at the scale a reader works at (Sections 5 and 6).
+3. A bilinear sketch of the full update that recovers concept on unseen adapters at 11.0 times chance,
+   above the published singular-direction detector at 7.3 on the same corpus and split (Section 6).
+4. The finding that carrying klein directions into a foreign residual stream needs no projection map,
+   because every klein module already has a side at residual width (Section 4).
+5. A protocol for evaluating weight-space readers that separates a broken setup from a negative
+   result, derived from four of our own failed runs (Section 8).
 
 ## 2. Related work
 
@@ -67,8 +72,10 @@ up to that symmetry \cite{putterman2024learning}. Features on singular *directio
 depend on sign and, where singular values are close, are ill-conditioned: the perturbation of a
 singular vector scales inversely with its spectral gap \cite{wedin1972perturbation}. Sign
 indeterminacy alone can be handled by a fixed convention \cite{bro2008resolving,lim2023sign}, and the
-gap problem cannot. We measured 59.2% of gaps below $10^{-2}$ on our corpus, which is why we use
-subspace projectors rather than individual directions.
+gap problem cannot. We measured 59.2% of gaps below $10^{-2}$ on our corpus. Subspace projectors
+avoid the sign and rotation problems and were our first choice for that reason; Section 6 shows they
+are nonetheless the weakest of the three features once the recipe varies, and that a linear function
+of the product $\Delta W$ avoids all three problems at once.
 
 **Adapter generation and structure.** Related work models the adapter distribution itself
 \cite{chen2026glora,zheng2026fedgsa,castin2026balanced}.
@@ -98,12 +105,19 @@ adapter's architecture, so an adapter direction is already a vector the describi
 klein adapter direction lives in a diffusion transformer's activation space and has no meaning in a
 Qwen3-14B residual stream.
 
-**Projection bank.** We build a frozen per-layer map from the base model's own output projections:
-klein's `to_out` for attention blocks and `ff.linear_out` for feed-forward blocks, the analogues of
-`o_proj` and `down_proj`. This gives 20 attention and 5 feed-forward maps. The map is frozen and
-carries no trained parameters, so it cannot absorb the task itself. This matters at our corpus size,
-where a learned projection of the same shape would add on the order of $10^5$ parameters against a few
-hundred training examples.
+**A projection map turns out to be unnecessary.** The obvious port reads klein's own write-back
+matrices, `img_attn.proj` and `txt_attn.proj` for attention and `img_mlp.2` and `txt_mlp.2` for
+feed-forward, as the analogues of `o_proj` and `down_proj`, and maps each direction through them. We
+built that and then found it does nothing. Every klein module has exactly one side at residual width:
+input-side modules such as `img_mlp.0` ($[18432, 3072]$) carry it on the input, output-side modules
+such as `img_mlp.2` ($[3072, 9216]$) on the output. Selecting that side by dimension leaves the map
+with nothing to multiply, and the measured ratio $\lVert Wd \rVert / \lVert d \rVert$ is exactly 1.
+
+Selecting it by module NAME instead, which is how our implementation began, is worse than
+unnecessary. klein's names match none of the patterns used for FLUX, so every output-side module was
+treated as input-side, contributed its non-residual side, and was then discarded on a shape check:
+**42.1% of all modules, with no error raised.** Choosing by dimension needs no name table and drops
+nothing.
 
 **Injection.** Adapter tokens are added at decoder layer 1, rescaled to the norm of the activation
 they join:
@@ -112,10 +126,13 @@ $$h \leftarrow h + \frac{\lVert h \rVert}{\lVert v \rVert} v$$
 
 This is parameter-free. An unnormalised version diverges, which the source work also reports.
 
-**Encoder.** Each adapter contributes rank-$k$ subspace projector diagonals per module,
-$\mathrm{diag}(U_k U_k^\top)$ concatenated with $\mathrm{diag}(V_k V_k^\top)$. Projectors are
-invariant to rotation inside the retained subspace, so they remain defined where individual singular
-directions are ill-conditioned (Section 2).
+**Encoder.** We report two. Subspace projectors give per module
+$\mathrm{diag}(U_k U_k^\top)$ concatenated with $\mathrm{diag}(V_k V_k^\top)$, invariant to
+rotation inside the retained subspace. The bilinear sketch gives
+$R_{\text{out}}^\top \Delta W R_{\text{in}}$ with fixed per-module random $R$, one token per
+module at $p \times q = d_{\text{model}}$. The sketch is a linear function of $\Delta W$, so it is
+exactly GL($r$)-gauge and coupled-sign invariant with no canonicalisation step. Section 6 measures
+both.
 
 **Supervision.** Following the source work we ask several questions per adapter rather than one, since
 their single-question setting collapsed to 0%.
@@ -140,9 +157,48 @@ only rank stays at chance on both axes.
 The concept axis runs over 32 adapters and 8 concepts, and the rank axis over 12 adapters and 3
 concepts, because both require a clamped recipe and only that subset has one. Handed the full
 625-adapter corpus the test still selects the same 32, so its scale is set by the clamped subset and
-does not grow with the corpus. Section 6 shows why that matters.
+does not grow with the corpus. Section 6 measures the same features at the scale the reader works at,
+and the ordering does not survive.
 
-## 6. Reader: current status
+## 6. The same features at the reader's scale
+
+The test in Section 5 retrieves over 8 concepts with the training recipe held fixed. The reader
+describes 120 concepts with the recipe varying. We measured every feature again in the second
+setting: one multinomial logistic classifier per feature, on the split the reader uses, holding out
+one adapter per concept (625 adapters, 120 concepts, 98 held out, chance 0.0083).
+
+| feature | held-out accuracy | multiple of chance | top-5 | Section 5 mAP |
+|---|---|---|---|---|
+| subspace projectors | 0.031 (3/98) | 3.7 | 0.031 | **1.000** |
+| top singular direction + logistic regression \cite{africa2026csam} | 0.061 (6/98) | 7.3 | 0.163 | 0.756 |
+| **bilinear sketch of $\Delta W$** | **0.092 (9/98)** | **11.0** | **0.194** | 0.917 |
+
+Two results follow.
+
+**The ordering inverts.** Subspace projectors win Section 5 outright at mAP 1.000 and come last here
+at 3.7 times chance, below both alternatives. A feature selected on 8-way retrieval under a clamped
+recipe was the worst available choice for the task the reader performs. This is the concrete form of
+the gap named in Section 5, measured rather than argued, and it applies to any weight-space feature
+validated the same way.
+
+**A sketch of the full update beats a feature built from singular directions.** The bilinear sketch
+$R_{\text{out}}^\top \Delta W R_{\text{in}}$ is a linear function of $\Delta W$, so it is exactly
+invariant to the GL($r$) gauge and to coupled sign flips, with no canonicalisation step
+\cite{putterman2024learning}. It reaches 11.0 times chance where the published singular-direction
+feature reaches 7.3. This is consistent with our own measurement that 59.2% of singular gaps fall
+below $10^{-2}$ (Section 2): where the gap is small the individual direction is ill-conditioned, and
+the product is not.
+
+Training accuracy is 1.000 for every feature, which is expected when the feature dimension exceeds
+the sample count and carries no information. Only the held-out column is evidence.
+
+Two limits on these numbers. The sketch is computed per module and adapters carry different numbers
+of modules, so the classifier truncates every adapter to the shortest (40 of up to 180), making 0.092
+a lower bound rather than the best available. And a rank-only control recovers rank at 3.8 times
+chance on the same features, so recipe is present in the sketch; concept exceeds it, but the sketch
+is not recipe-blind.
+
+## 7. Reader: current status
 
 The describing model is not yet working. On held-out adapters it reaches 0.029 against a
 nearest-neighbour memorisation comparison at 0.029, where chance is 0.007. Two controls, one feeding
@@ -161,7 +217,7 @@ Section 5 result licenses 8-way retrieval under a clamped recipe. The reader per
 description under a varied recipe. These are different claims, and the second is not yet established.
 We are measuring each encoder from Section 5 at the full corpus scale to separate the two.
 
-## 7. Evaluating weight-space readers
+## 8. Evaluating weight-space readers
 
 Two of our runs produced numbers that looked like negative results and were misconfigurations. Both
 would have been read as evidence about weight-space readability. The protocol below comes from those
@@ -193,7 +249,7 @@ failures.
    specific: the control tracks the real configuration exactly, including where both score a hit,
    which is the model answering from the label prior rather than from the adapter.
 
-## 8. Status and next steps
+## 9. Status and next steps
 
 Verified: the corpus, the projection bank, and the presence of concept in weights under a clamped
 recipe with rank invariance.
