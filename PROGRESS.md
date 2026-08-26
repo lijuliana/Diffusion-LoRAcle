@@ -597,6 +597,23 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Sweep #6 pace measured: ~1.3 h/epoch, so e25 is the arm at deadline risk
+
+All eight arms completed epoch 0 in about 1.3 hours. The corpus grew to 764 adapters and the token
+budget is 400 with gradient checkpointing, so epochs are longer than sweep #5's.
+
+    e6  -> ~7.8 h      e12 -> ~15.6 h      e25 -> ~32.5 h
+
+Against a workshop deadline of roughly 27-28 August, e6 and e12 land comfortably and **e25 is the
+only arm at risk**. That is acceptable: the question is whether the rate rises with epochs, and e6
+against e12 answers it. e25 would strengthen the trend, not create it, so nothing in the paper
+depends on it finishing.
+
+Not intervening on the pace. The obvious lever, cutting the live control checks, saves about eight
+minutes an epoch against a ~78-minute epoch, and those checks are the mechanism that stops a broken
+run consuming a full sweep. Trading that for 10% throughput is the wrong trade given how this project
+has actually failed.
+
 ### Decision rule fixed in advance of sweep #6, and validated against a known answer
 
 `scripts/analyze_sweep.py` was written and validated while sweep #6 was still at epoch 1, so the rule
