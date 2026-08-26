@@ -9,7 +9,7 @@ now use to tell a broken setup from a negative result.
 The feature that scores a perfect retrieval result on the standard validation test is the worst of
 the three we measured at the scale a reader actually works at. Weight-space readers are validated by
 holding the training recipe fixed and retrieving over a handful of concepts. On that test, subspace
-projectors reach mAP 1.000. Measured again over 155 concepts with rank, seed, and module set varying,
+projectors reach mAP 1.000. Measured again over 120 concepts with rank, seed, and module set varying,
 they fall to 3.7 times chance, below the published singular-direction detector at 7.3, while a
 bilinear sketch of the full update reaches 11.0. The small test does not rank features the way the
 large one does, and it is the test the field currently uses.
@@ -22,7 +22,8 @@ first, a projection bank built from the base model's own output projections, tur
 unnecessary, because every klein module already carries one side at residual width and selecting that
 side by dimension leaves the map with nothing to multiply.
 
-We release a corpus of 764 minted FLUX.2-klein-4B adapters spanning 155 concepts, with recipe varied
+We release a corpus of 764 minted FLUX.2-klein-4B adapters spanning 155 concepts, of which the
+measurements above use the 625 adapters and 120 concepts available when they were run, with recipe varied
 independently of concept so that a feature reading recipe rather than concept can be detected. The
 describing model itself does not yet work: trained on the tokens that a nearest-neighbour lookup
 exploits at 14.3 times chance, it stays near the floor, and its best configuration does not separate
