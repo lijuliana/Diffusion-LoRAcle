@@ -192,17 +192,35 @@ the product is not.
 Training accuracy is 1.000 for every feature, which is expected when the feature dimension exceeds
 the sample count and carries no information. Only the held-out column is evidence.
 
-Two limits on these numbers. The sketch is computed per module and adapters carry different numbers
-of modules, so the classifier truncates every adapter to the shortest (40 of up to 180), making 0.092
-a lower bound rather than the best available. And a rank-only control recovers rank at 3.8 times
-chance on the same features, so recipe is present in the sketch; concept exceeds it, but the sketch
-is not recipe-blind.
+**The tokens the reader is given decide the outcome before training starts.** The features above are
+read by a classifier. The reader instead receives one token per direction, unit-normalised and mapped
+to the reader's width. Measured the same way, those tokens recover **nothing**: 0 of 98 held out,
+p=1.00, against rank recovered at 1.8 times chance from the identical tokens. They carry recipe and
+not concept. This holds with every module present; an earlier version of the selection rule discarded
+42.1% of modules, and repairing that moved the result from 1 of 98 to 0 of 98. The defect was real and
+was not the cause.
+
+The narrow claim the measurement supports is that unit-normalised direction tokens carry no concept
+at this scale. The singular-direction detector reaches 7.3 times chance on the same adapters while
+retaining singular-value magnitude, so magnitude is the plausible location of the difference, and we
+have not yet isolated it.
+
+Two limits on the numbers above. The sketch is computed per module and adapters carry different
+numbers of modules, so the classifier truncates every adapter to the shortest (40 of up to 180),
+making 0.092 a lower bound rather than the best available. And a rank-only control recovers rank at
+3.8 times chance on the same features, so recipe is present in the sketch; concept exceeds it, but the
+sketch is not recipe-blind.
 
 ## 7. Reader: current status
 
 The describing model is not yet working. On held-out adapters it reaches 0.029 against a
 nearest-neighbour memorisation comparison at 0.029, where chance is 0.007. Two controls, one feeding
 shuffled adapter tokens and one removing injection entirely, both sit at 0.000.
+
+Section 6 explains the largest part of this. Every run reported here was trained on direction tokens,
+the representation measured at 0 of 98. No choice of learning rate, epoch count, or corpus size
+recovers concept from an input that does not contain it, and the runs below should be read as
+establishing that rather than as evidence about the method.
 
 We have measured the cause and it is not corpus size. Training accuracy across all eight
 configurations sits between 0.000 and 0.013, so no configuration fit the data it was trained on. A
