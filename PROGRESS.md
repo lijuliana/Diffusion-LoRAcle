@@ -597,6 +597,36 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### The projection defect: 42% of modules silently dropped, and the bank was a no-op anyway
+
+Ran the expert checklist (probe the projection's input, collapse check, random-matrix control,
+transpose test). Collapse and scale were healthy from the start: pairwise cosine between adapters
+0.0019, norm ratio 1.53, so no constant-vector, zeros, or scale bug. Coverage was not.
+
+**Cause, verified against the checkpoint rather than guessed.** `residual_side()` and
+`writes_to_residual()` match FLUX/diffusers name fragments (`to_out`, `ff.net.2`, `linear_out`).
+klein names its modules `img_attn.proj`, `txt_attn.proj`, `img_mlp.0/2`, `txt_mlp.0/2`, which match
+none of them. So every output-side module was classed as input-side: `img_mlp.2` is `[3072, 9216]`
+and contributed its **9216**-wide input side instead of its 3072-wide residual-native side, then
+`project()` dropped it on the shape check and the caller skipped it. **42.1% of all modules, silently,
+with no error.** My first guess was `_block_index`'s regex; the checkpoint said otherwise.
+
+**Fix.** Every klein module has exactly one 3072-wide side (input-side modules carry it on V,
+output-side on U), so `pick_residual_side` chooses by dimension and `project()` passes through
+anything already at residual width. Needs no name table. Coverage 42.1% dropped -> **0%**, 1135 ->
+1960 modules kept, and the scale ratio is now exactly **1.0000**, which says the bank never
+multiplies anything: **for klein the ProjectionBank is a no-op.** The port was both misconfigured and
+unnecessary for this architecture. Regression test in `tests/test_residual_side.py` covers all seven
+klein module shapes.
+
+**What this invalidates, and what it does not.** It does NOT touch product_sketch (never uses the
+bank), the gate results (featurisers on raw weights), the corpus, or the learning-rate, epoch and
+token-truncation findings. It DOES invalidate the claim I was drafting that cross-architecture
+projection fails: we measured a misconfigured bank, not the idea. The 1/98 projbank probe still
+correctly explains why sweeps #1-#3 failed, because that is what they trained on, but it is not
+evidence about the method. Re-extracting `tokens_projbank_v2` and `tokens_randorth` with the fix now;
+those decide whether complete residual-native directions carry concept.
+
 ### Preflight passes on product_sketch tokens; the rank-leakage control clears; sweep #4 launched
 
 `scripts/preflight.py` now runs before any GPU job and refuses to launch on failure. It was validated
