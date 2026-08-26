@@ -597,6 +597,34 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Six epochs is the first arm to move: 3/84 against chance, but not yet against its control
+
+`ps_warm_e6` is the first arm in six sweeps to depart from the floor.
+
+| arm | TRAIN | held-out | x chance | retrieval rank |
+|---|---|---|---|---|
+| ps_warm_e1 (1 epoch) | 0.010 | 0.012 | 1.4 | 0.505 |
+| ps_cold_e3 / ps_warm_r32_e3 (3 epochs) | 0.012 | 0.012 / 0.000 | 1.4 / 0 | 0.472 / 0.490 |
+| **ps_warm_e6 (6 epochs)** | **0.042** | **0.036 (3/84)** | **4.3** | 0.484 |
+| CONTROL shuffled_e3 / no-inject_e3 | 0.011 / 0.010 | 0.012 | 1.4 | 0.480 / 0.495 |
+
+**Train accuracy moved for the first time**, 0.012 at 3 epochs to 0.042 at 6. Every earlier arm sat
+at 0.010-0.012 regardless of configuration, so this is the first evidence any reader is fitting
+anything at all, and it says the epoch ladder was the right axis once the input actually contained
+concept.
+
+**What the number does and does not support.** Against chance, 3/84 gives p=0.034. Against its
+matched control at 1/84, Fisher exact gives **p=0.310**. And six arms were tested, so Holm correction
+takes the 0.034 to roughly 0.20. **The honest statement is that no arm yet beats its control, and
+this one beats chance only before correction.** It is a direction, not a result.
+
+The comparison that decides it is `ps_CONTROL_shuffled_e6`, the matched 6-epoch control, which is the
+one arm still training. If e6 holds its 3/84 while that control stays at 1/84, the next step is more
+epochs and a larger held-out set, not a new representation.
+
+`ps_warm_e3` was lost: it crashed inside `torch.save` when the disk filled, so the 3-epoch warm arm
+has no result. Its slot in the ladder is covered by `ps_cold_e3` and `ps_warm_r32_e3`, both at 0.012.
+
 ### Five arms agree with their own controls; injection is live; and the checkpoint save filled the disk
 
 **Sweep #5, five arms complete** (product_sketch, n=84 held out, chance 0.0083):
