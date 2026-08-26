@@ -6,30 +6,26 @@ now use to tell a broken setup from a negative result.
 
 ## Abstract
 
-The feature that scores a perfect retrieval result on the standard validation test is the worst of
-the three we measured at the scale a reader actually works at. Weight-space readers are validated by
-holding the training recipe fixed and retrieving over a handful of concepts. On that test, subspace
-projectors reach mAP 1.000. Measured again over 120 concepts with rank, seed, and module set varying,
-they fall to 3.7 times chance, below the published singular-direction detector at 7.3, while a
-bilinear sketch of the full update reaches 11.0. The small test does not rank features the way the
-large one does, and it is the test the field currently uses.
+The feature that scores a perfect result on the standard validation test is the worst of the three we
+measured at the scale a reader actually works at. Weight-space readers are validated by holding the
+training recipe fixed and retrieving over a handful of concepts, where subspace projectors reach mAP
+1.000. Measured again over 120 concepts with rank, seed, and module set varying, they fall to 3.7
+times chance, below the published singular-direction detector at 7.3, while a bilinear sketch of the
+full update reaches 11.0. The small test does not rank features the way the large one does, and it is
+the test the field currently uses.
 
 We found this while porting LoRAcle, which makes a language model describe an adapter in open text
-rather than assign it a label, from text-model adapters to image diffusion transformer adapters. Two
-things do not transfer: the adapter and the describing model no longer share an architecture, and
-image adapters carry no token vocabulary in common with a language model. The obvious fix for the
-first, a projection bank built from the base model's own output projections, turns out to be
-unnecessary, because every klein module already carries one side at residual width and selecting that
-side by dimension leaves the map with nothing to multiply.
+rather than assign it a label, from text-model adapters to image diffusion transformer adapters.
+Neither an architecture nor a token vocabulary is shared across that gap. The obvious bridge, a
+projection built from the base model's own output matrices, turns out to be unnecessary: every klein
+module already carries one side at residual width, leaving the map nothing to multiply.
 
-We release a corpus of 764 minted FLUX.2-klein-4B adapters spanning 155 concepts. Rank, seed, and
-module set are varied independently of concept, so a feature that reads the training recipe instead
-of the concept can be caught. The measurements above were run on the 625 adapters and 120 concepts
-available at the time. The describing model itself does not yet work. Trained on tokens that a
-nearest-neighbour lookup exploits at 14.3 times chance, it stays near the floor, and its best
-configuration does not separate from a control fed shuffled tokens at matched settings. We report the measured causes, the diagnostic
-protocol that distinguishes a broken setup from a negative result, and the four of our own runs that
-protocol would have stopped.
+We release 764 minted FLUX.2-klein-4B adapters over 155 concepts, with rank, seed, and module set
+varied independently of concept so a feature reading recipe instead of concept can be caught. The
+measurements above use the 625 adapters available at the time. The describing model does not yet
+work: given tokens a nearest-neighbour lookup exploits at 14.3 times chance, it stays near the floor
+and does not separate from a shuffled-token control at matched settings. We report the measured
+causes and the protocol that tells a broken setup from a negative result.
 
 ## 1. Introduction
 
