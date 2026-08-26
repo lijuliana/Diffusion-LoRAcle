@@ -597,6 +597,39 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Representation table at 120-way: the feature that won the 8-way gate is the worst one here
+
+`probe_features.py` finished three of five rows (625 adapters, 120 concepts, n=98 held out,
+chance 0.0083):
+
+| representation | train | held-out | x chance | top-5 | 8-way gate mAP |
+|---|---|---|---|---|---|
+| subspace_proj | 1.000 | 0.031 | 3.7 | 0.031 | **1.000** |
+| u1_logreg (Africa et al.) | 1.000 | 0.061 | 7.3 | 0.163 | 0.756 |
+| **product_sketch** | 1.000 | **0.092** | **11.0** | **0.194** | 0.917 |
+
+Two results here, and the second is the more important one.
+
+**Our sketch beats the published detector at our scale.** `u1_logreg` is the top-left singular
+direction plus logistic regression from arXiv 2607.25750, implemented faithfully. At 120-way on
+recipe-varied adapters it recovers concept at 7.3x chance; `product_sketch` reaches 11.0x. That is
+the comparison the paper needs, measured on the same corpus and split rather than quoted from
+their setting.
+
+**The feature that scored mAP 1.000 on the gate is the worst of the three at the reader's scale.**
+`subspace_proj` won the clamped-recipe 8-way retrieval test outright and lands at 3.7x here, below
+both alternatives. This is the strongest single piece of evidence for the argument that an 8-way
+clamped-recipe gate does not license a 120-way varied-recipe claim, and it is our own earlier
+conclusion being overturned by a better-scoped measurement rather than an abstract worry.
+
+Train accuracy is 1.000 for every row, which is expected with d >> n and carries no information.
+`our_svd` and `rank_leak_CONTROL` rows still pending.
+
+**Sweep #4 status:** clean, no tracebacks, into epoch 1. Every arm including both controls sits at
+train-acc 0.000 with slot credit oscillating 0.000-0.062 on both sides. No separation. By the rule
+recorded above, an arm that has not fit its training set is void, so nothing here is interpretable
+yet.
+
 ### Sweep #4 crashed on variable-length token caches; fixed and relaunched
 
 All four arms died within a minute of the first live control check:
