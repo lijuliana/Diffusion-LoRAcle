@@ -190,7 +190,10 @@ below $10^{-2}$ (Section 2): where the gap is small the individual direction is 
 the product is not.
 
 Training accuracy is 1.000 for every feature, which is expected when the feature dimension exceeds
-the sample count and carries no information. Only the held-out column is evidence.
+the sample count and carries no information. Only the held-out column is evidence. Two further
+features were queued and did not finish in time for this version: our own canonicalised
+per-direction encoder, which a separate measurement already reports as the wrong object, and a
+rank-only control, whose function is covered here by the rank-leakage figure reported below.
 
 **The tokens the reader is given decide the outcome before training starts.** The features above are
 read by a classifier. The reader instead receives one token per direction, unit-normalised and mapped
