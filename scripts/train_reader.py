@@ -323,7 +323,10 @@ def main():
             loss.backward()
             tot += float(loss.detach()) * a.grad_accum
             if a.control_every and steps_per_epoch:
-                _every = max(1, int(steps_per_epoch * a.control_every)) * a.batch
+                # steps_per_epoch counts OPTIMIZER steps; `i` counts EXAMPLES. Without the
+                # grad_accum factor this fired 8x too often (110 checks/epoch, not 10),
+                # adding ~3500 generations and most of a 2-hour epoch.
+                _every = max(1, int(steps_per_epoch * a.control_every)) * a.batch * a.grad_accum
                 if i and i % _every == 0:
                     live_check(f"ep{ep} {100 * i / max(1, len(train)):.0f}%")
             if (i // max(1, a.batch)) % a.grad_accum == (a.grad_accum - 1):
