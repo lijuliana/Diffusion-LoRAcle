@@ -597,6 +597,39 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### The reader is fed the one representation that carries no generalisable signal
+
+`probe_features.py`, one logistic classifier per representation, same split as the reader (one
+held-out adapter per concept), 625 adapters / 120 concepts / n=98 held out / chance 0.0083:
+
+| representation | train | held-out | x chance | top-5 | binomial p |
+|---|---|---|---|---|---|
+| **projbank tokens (the READER's input)** | 1.000 | 0.010 (1/98) | 1.2 | 0.020 | 0.56, n.s. |
+| subspace_proj | 1.000 | 0.031 (3/98) | 3.7 | 0.031 | 0.049 |
+| **product_sketch** | 1.000 | **0.092 (9/98)** | **11.0** | **0.194** | **1.6e-07** |
+
+**Concept generalises at the reader's own scale.** This resolves the ambiguity that two sweeps could
+not: it is not true that 120-way is simply too hard, and it is not true that LoRA weights carry
+nothing readable. `product_sketch` recovers concept on unseen adapters at 11x chance, with top-5 at
+0.194 against a 0.042 chance rate.
+
+**And the reader has been reading the wrong thing.** The projbank tokens fed to every sweep so far
+sit at 1.2x chance, p=0.56, statistically indistinguishable from guessing. Every reader arm we have
+run was handed a representation that a linear classifier cannot extract concept from either. The lr
+error, the epoch error and the 128-token truncation were all real, and all downstream of this.
+
+Train accuracy is 1.000 for every representation, which is expected with d >> n and carries no
+information; only the held-out column does.
+
+Caveat, pending: the `rank_leak_CONTROL` row has not finished (the probe is starved at nice-19 behind
+eight training jobs). Until it lands, `product_sketch`'s 11x cannot be fully separated from recipe
+leakage. The gate's own rank-leak control sat at chance on the concept axis (0.183, p=0.78), which
+supports but does not substitute for it. **Do not promote this number into the paper until the control
+row is in.**
+
+Next: extract tokens from `product_sketch` rather than projbank and give the reader the
+representation that demonstrably carries the signal.
+
 ### How LoRAcle de-risked their experiments, and the three things we were not copying
 
 Juliana asked how the source work avoided the iteration spiral we have been in, and whether they
