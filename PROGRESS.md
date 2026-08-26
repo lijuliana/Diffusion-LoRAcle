@@ -597,6 +597,38 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### First product_sketch arm: the tokens carry signal, the language model cannot use it
+
+`ps_warm_e1` (product_sketch, warm start, 1 epoch) is the first arm to finish with graded metrics.
+
+| | train (n=1708) | held-out adapter (n=84) | held-out family (n=708) |
+|---|---|---|---|
+| reader, exact concept | 0.010 | **0.012** | 0.000 |
+| nearest neighbour, SAME tokens | 0.158 | **0.119** | 0.000 |
+| retrieval rank (0.5 = chance) | 0.510 | **0.505** | 0.527 |
+
+**A nearest-neighbour lookup on the identical tokens reaches 14.3x chance (0.119) while the trained
+reader reaches 1.4x (0.012).** Retrieval rank sits at 0.505 on held-out adapters, which is the
+chance-centred metric saying no signal, and it agrees with the exact-match number instead of
+rescuing it.
+
+This is a different failure from every previous sweep, and a more useful one. Until now the reader
+was trained on inputs measured to contain nothing (projbank, 0/98). Here the input demonstrably
+contains concept: a trivial lookup extracts it at 14x chance, and the linear probe at 7.3x. **The
+bottleneck has moved from the representation to the reader.** The language model is failing to use
+weight tokens that a nearest-neighbour lookup exploits easily.
+
+Caveat on the arm: one epoch, and train exact-match is 0.010, so it has not fit its training set and
+by the standing rule is not fully interpretable. The 3- and 6-epoch arms decide whether this is
+undertraining or something structural. Note the direction of the gap though: on TRAIN, where
+memorisation is easiest, nearest-neighbour gets 0.158 and the reader gets 0.010, so the reader is not
+even memorising what a lookup memorises.
+
+**`READS-slot` is not a usable discriminator.** The no-injection control, whose tokens are zeroed and
+which therefore cannot read anything, reported `READS-slot +0.054`. Any positive value on that metric
+at this n is uninformative. Use retrieval rank and the exact/nearest comparison instead, and drop
+READS-slot from the paper.
+
 ### The fixed projection path carries NO concept, only recipe. Directions are the wrong object.
 
 `preflight` on `tokens_projbank_v2`, rebuilt with correct residual-side selection and **0% of modules
