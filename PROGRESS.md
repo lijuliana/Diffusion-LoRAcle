@@ -597,6 +597,38 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### A crash that only fires after a full training run, and the gate that now prevents it
+
+`cross_lora_control` raised `UnboundLocalError: local variable 'slot' referenced before assignment`.
+`slot` was added with the graded metrics and never initialised. The call sits in FINAL eval, after
+training completes, and both the results JSON and the checkpoint are written **after** it, so an arm
+trains for hours and then produces nothing. `ps_warm_e1` died this way; the remaining sweep-4 and
+sweep-3d arms were on the same path, sweep #4 at epoch 2.9 of 3.
+
+This is the third defect today whose cost was a full run (lr 6x low, 128-token prefix truncation,
+now this). The common shape is that none of them could fail fast: each needed a complete run to
+reveal itself. The answer is not more care, it is gates that make an unrunnable run unlaunchable.
+`reader_sweep5.sh` now refuses to start unless both pass:
+
+  **LINT** `pyflakes` over `train_reader.py`; any undefined name aborts. Costs one second and
+  catches exactly this class.
+  **PREFLIGHT** `scripts/preflight.py` over the token cache; anything but PASS aborts.
+
+Both fired correctly on launch: lint clean, preflight PASSED (6/98, p=1.83e-04).
+
+**Sweep #3d retired** rather than restarted. It tests projbank under the pre-fix residual-side
+selection, so it measures a pipeline that dropped 42% of modules. Its record is the live READS lines
+already in `results/_superseded/sweep3d/`, which are enough to state the projbank negative.
+
+**Sweep #5** replaces it: 8 arms on product_sketch, epoch ladder 1/3/6, a cold-start arm, a capacity
+arm, and three controls (shuffled at 3 and 6 epochs, no-injection at 3) so every real arm has a
+control at matched epochs, lr and token budget.
+
+Recorded from sweep #4 before it was stopped, and worth not over-reading: at epoch 2 the real arm
+reached train-acc 0.062 with its shuffled check at 0.000, while the shuffled-trained control reached
+the same 0.062 with its check also at 0.062. That pattern is the one we are looking for, but
+`live_check` samples k=16, so 0.062 is **one example**. It is noise, not a result.
+
 ### Representation table at 120-way: the feature that won the 8-way gate is the worst one here
 
 `probe_features.py` finished three of five rows (625 adapters, 120 concepts, n=98 held out,
