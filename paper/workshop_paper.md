@@ -6,25 +6,29 @@ now use to tell a broken setup from a negative result.
 
 ## Abstract
 
-A LoRA adapter's weights can be inspected without running the model it modifies, which matters when a
-hub holds more adapters than anyone can execute. Existing weight-space readers classify: they map an
-adapter to a label from a fixed set. We port LoRAcle, which instead makes a language model *describe*
-an adapter in open text, from text-model adapters to image diffusion transformer adapters. Two things
-do not transfer. The adapter and the describing model no longer share an architecture, so adapter
-weights must be carried into a foreign residual stream; and image adapters are trained on rendered
-images rather than text, so no shared token vocabulary links the two. We report that the obvious port
-of the first, a projection bank built from the base model's own output projections, is unnecessary
-here: every klein module already carries one side at residual width, so selecting that side by
-dimension leaves the bank with nothing to multiply. We release a corpus of 625 minted klein adapters
-spanning 120 concepts with controlled variation in rank, seed, and module set.
-On the clamped-recipe subset of this corpus (32 adapters, 8 concepts) we show concept is recoverable
-from weights alone (mAP 1.000, p=0.0005) and survives rank variation (mAP 0.931, p=0.0005, 12
-adapters) while a rank-only comparison feature stays at chance (p=0.92). Measured again at the scale
-the reader works at, 120 concepts with the recipe varying, that ordering inverts: subspace projectors
-fall to 3.7 times chance, below the published singular-direction detector at 7.3, while a bilinear
-sketch of the full update reaches 11.0. A feature chosen on the smaller test was the worst available
-choice for the larger one. The describing model is not yet working, and we report the measured causes
-and the diagnostic protocol that identified them.
+The feature that scores a perfect retrieval result on the standard validation test is the worst of
+the three we measured at the scale a reader actually works at. Weight-space readers are validated by
+holding the training recipe fixed and retrieving over a handful of concepts. On that test, subspace
+projectors reach mAP 1.000. Measured again over 155 concepts with rank, seed, and module set varying,
+they fall to 3.7 times chance, below the published singular-direction detector at 7.3, while a
+bilinear sketch of the full update reaches 11.0. The small test does not rank features the way the
+large one does, and it is the test the field currently uses.
+
+We found this while porting LoRAcle, which makes a language model describe an adapter in open text
+rather than assign it a label, from text-model adapters to image diffusion transformer adapters. Two
+things do not transfer: the adapter and the describing model no longer share an architecture, and
+image adapters carry no token vocabulary in common with a language model. The obvious fix for the
+first, a projection bank built from the base model's own output projections, turns out to be
+unnecessary, because every klein module already carries one side at residual width and selecting that
+side by dimension leaves the map with nothing to multiply.
+
+We release a corpus of 764 minted FLUX.2-klein-4B adapters spanning 155 concepts, with recipe varied
+independently of concept so that a feature reading recipe rather than concept can be detected. The
+describing model itself does not yet work: trained on the tokens that a nearest-neighbour lookup
+exploits at 14.3 times chance, it stays near the floor, and its best configuration does not separate
+from a control fed shuffled tokens at matched settings. We report the measured causes, the diagnostic
+protocol that distinguishes a broken setup from a negative result, and the four of our own runs that
+protocol would have stopped.
 
 ## 1. Introduction
 
