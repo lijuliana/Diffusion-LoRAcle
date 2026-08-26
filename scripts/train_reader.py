@@ -442,10 +442,15 @@ def main():
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     # Persist the reader. Without this every re-evaluation costs a full retrain, which is
     # what made sweep #2's arms unrecoverable after the metric turned out to be too strict.
+    # TRAINABLE parameters only. Saving the full state_dict wrote the frozen 14B backbone with every
+    # arm: 63 GB each, 331 GB across one sweep, which filled the 485 GB disk to 100%. The backbone is
+    # reconstructible from --model and the warm start, so persisting it buys nothing.
     ckpt = Path(a.out).with_suffix(".reader.pt")
-    torch.save({"state_dict": {k: v.to("cpu") for k, v in model.state_dict().items()},
-                "args": vars(a), "vocab": VOCAB}, ckpt)
-    print(f"saved reader -> {ckpt}")
+    trainable = {k: v.detach().to("cpu") for k, v in model.named_parameters() if v.requires_grad}
+    torch.save({"state_dict": trainable, "args": vars(a), "vocab": VOCAB,
+                "note": "trainable parameters only; rebuild the backbone from args['model']"}, ckpt)
+    mb = sum(v.numel() * v.element_size() for v in trainable.values()) / 1e6
+    print(f"saved reader -> {ckpt}  ({len(trainable)} tensors, {mb:.0f} MB)")
 
     Path(a.out).write_text(json.dumps({"model": a.model, "n_directions": a.n_directions,
                                        "epochs": a.epochs, "results": res}, indent=2))
