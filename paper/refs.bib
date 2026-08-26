@@ -114,3 +114,15 @@
   archivePrefix = {arXiv},
   year   = {2022}
 }
+
+% verified: artefact-direct. LoRAcle is released as code and model weights, not as a paper, so the
+% repository and the model card ARE the citable artefacts. Both URLs were fetched and confirmed to
+% exist, and the warm-start checkpoint named below is the one this work initialises from. There is no
+% DOI or arXiv id to check against an indexer; recorded here so the absence is deliberate.
+@misc{selder2026loracle,
+  author = {Selder, Cees},
+  title = {LoRAcle: interpreting {LoRA} adapters with a language model},
+  year = {2026},
+  howpublished = {Code: \url{https://github.com/ceselder/loracles}. Model: \url{https://huggingface.co/ceselder/persona-loracle-v4}},
+  note = {Warm-start checkpoint: \texttt{ceselder/loracle-pretrain-v7-sweep-A-oneq-final-step3120}},
+}

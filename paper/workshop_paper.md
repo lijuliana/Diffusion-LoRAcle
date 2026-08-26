@@ -38,8 +38,8 @@ after canonicalising them \cite{han2026w2t}. Each returns a label from a set fix
 was seen, so an adapter implementing something outside that set is reported as the nearest label
 inside it.
 
-Open-ended description removes that constraint. LoRAcle trains a language model to answer questions
-about an adapter injected into its own residual stream, so the output is text rather than a class
+Open-ended description removes that constraint. LoRAcle \cite{selder2026loracle} trains a language
+model to answer questions about an adapter injected into its own residual stream, so the output is text rather than a class
 index. Its published results cover text-model adapters describing text-model behaviour, where the
 adapter and the describing model share both an architecture and a token vocabulary.
 
@@ -77,11 +77,13 @@ avoid the sign and rotation problems and were our first choice for that reason; 
 are nonetheless the weakest of the three features once the recipe varies, and that a linear function
 of the product $\Delta W$ avoids all three problems at once.
 
+**Open-ended description.** LoRAcle \cite{selder2026loracle} injects adapter directions into the
+residual stream of a language model that shares the adapter's architecture and trains it to answer
+questions about them. It is released as code and weights rather than as a paper. This work ports it
+across architectures and modalities.
+
 **Adapter generation and structure.** Related work models the adapter distribution itself
 \cite{chen2026glora,zheng2026fedgsa,castin2026balanced}.
-
-<!-- % TODO: needs verified ref — LoRAcle is released as code and weights, not a paper.
-     Cite the repository and model card once a citable artefact exists. -->
 
 ## 3. Corpus
 
