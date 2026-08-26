@@ -597,6 +597,36 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Paper restructured around the meta-model, not around the validation finding
+
+Juliana flagged that the draft had lost the plot: it led with the encoder-validation observation and
+framed the work as a port of someone else's method. Both were wrong about what this project is.
+
+Read the two closest meta-model papers for storyline shape rather than guessing. Natural Language
+Autoencoders opens "Natural Language Autoencoders (NLAs), an unsupervised method for generating
+natural language explanations of LLM activations"; Activation Oracles opens "We introduce activation
+oracles, LLMs trained to explain neuron activations in other LLMs using natural language". Both lead
+with what the thing IS plus its architecture, then run intro -> related work -> METHOD -> evaluation
+-> limitations, with the method before any results.
+
+Ours now opens "We introduce DiT-LoRAcle, a meta-model that reads the weights of an image diffusion
+transformer's LoRA adapter and says in natural language what that adapter does, without running it",
+and Section 3 is the architecture: encoder, injection, supervision, interpreter. The encoder
+comparison moved to Section 5 where it justifies the encoder choice, which is its actual job.
+
+Framing is ours rather than derivative, per Juliana: the introduction says we build a meta-model;
+LoRAcle is credited afterwards as the source of the injection-and-question-answering shape, with a
+subsection in Section 3 stating what we kept (norm-matched injection, token-level placeholder prefix,
+multi-question supervision, training regime) and what the modality change forced us to replace (the
+encoder, and the projection bank this architecture does not need).
+
+Lesson: I let the statistically cleanest result become the subject of the paper. Significance is not
+the same as importance, and the reader wants to know what was built before what was measured about it.
+
+**Sweep #6 e6 pair at epoch 5 of 6.** Live checks: real arm train-acc 0.125 with its shuffled control
+at 0.000, the same shape as sweep #5's 6-epoch arm on a larger corpus. k=16, so this is two examples
+and not a result.
+
 ### Sweep #6 pace measured: ~1.3 h/epoch, so e25 is the arm at deadline risk
 
 All eight arms completed epoch 0 in about 1.3 hours. The corpus grew to 764 adapters and the token
