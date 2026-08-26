@@ -302,12 +302,21 @@ would have been read as evidence about weight-space readability. The protocol be
 
 ## 8. Limitations
 
-The interpreter is not yet trained to a working point, and the strongest statement we can make about
-it is a direction at $p = 0.123$. The encoder comparison is a classifier result and does not establish that a language
-model can verbalise what the classifier finds. The clamped-recipe test in Section 5 runs over 32
-adapters and cannot be enlarged without minting a differently structured corpus. Our sketch is not
-recipe-blind, recovering rank at 3.8 times chance. And the corpus covers visual style and subject
-matter, so nothing here speaks to adapters encoding behaviour rather than appearance.
+Held-out description is not established. The interpreter's advantage over its matched control is
+clear during training and does not reach significance on unseen adapters ($p = 0.311$ at six epochs),
+so the claim we can support is that it uses the adapter it is given, not that it describes one.
+
+Every result involving a warm start is a rank-256 result, because a warm start replaces the LoRA
+configured before it. The capacity comparison we intended did not happen, and a corrected arm is
+running rather than reported here.
+
+The encoder comparison is a classifier result. It establishes that concept survives in the sketch,
+not that a language model can verbalise what a classifier finds, and those are different claims.
+
+The clamped-recipe test in Section 5 runs over 32 adapters and cannot be enlarged without minting a
+differently structured corpus. Our sketch is not recipe-blind, recovering rank at 3.8 times chance.
+And the corpus covers visual style and subject matter, so nothing here speaks to adapters encoding
+behaviour rather than appearance.
 
 ## 9. Status and next steps
 
@@ -316,12 +325,14 @@ the recoverability of concept from adapter weights, and an encoder comparison in
 from the small clamped test reverses at the scale a meta-model operates at.
 
 Open: whether a language model can verbalise what the sketch contains, and how much optimisation that
-takes. At six epochs the interpreter moves off the floor on three measurements at once while its
-matched control does not, and the effect is not significant at 84 held-out adapters. Six epochs is
-already six times the source configuration's budget, so the quantity that needs establishing is where
-that curve flattens. A longer epoch ladder on a larger held-out set is
-running, and it decides which of two papers this becomes. If the effect grows and separates from its
-control, the contribution is a working meta-model for image adapters and the corpus behind it. If it
-does not, the contribution is that concept is linearly recoverable from image-adapter weights at
-120-way while a language model trained on the same tokens is not, which is a sharper limit on
-weight-space verbalisation than we could state before and does not depend on the interpreter working.
+takes. Training accuracy separates from the control by three to six times and held-out accuracy does
+not yet follow, so the question is whether that gap closes with optimisation. Six epochs is already
+six times the source configuration's budget, and runs at 12 and 25 epochs are in progress, as is the
+corrected rank-16 arm.
+
+Those runs decide which of two papers this becomes. If held-out accuracy follows training accuracy,
+the contribution is a working meta-model for image adapters and the corpus behind it. If it does not,
+the contribution is that concept is linearly recoverable from image-adapter weights at 120-way while
+a language model trained on the same tokens does not learn to verbalise it, which is a sharper limit
+on weight-space verbalisation than we could state before and does not depend on the interpreter
+working.
