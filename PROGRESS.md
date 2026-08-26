@@ -597,6 +597,24 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### probe_features killed after 20 hours; the feature table stands at three of five rows
+
+`probe_features.py` ran for **19h57m** and never got past its fourth featurizer. It was niced to 19
+behind eight training jobs for most of that, then renice'd to 0, and still did not finish. Killed.
+Load fell from ~64 to 15.6, which matters because sweep #6's token extraction is on the critical path
+and was competing with it.
+
+The three rows we have are the ones the paper needs: `subspace_proj` 3.7x, `u1_logreg` 7.3x,
+`product_sketch` 11.0x. The two missing rows cost little. `our_svd` is our own canonicalised
+per-direction encoder, already refuted separately. `rank_leak_CONTROL` is covered independently by
+`preflight`, which reports concept at 7.3x against rank at 3.8x on the same features, so the
+rank-leakage question is answered without it.
+
+Lesson worth keeping: a five-featurizer sweep in one process has no checkpointing, so nineteen hours
+of work on rows one to three was only recoverable because each row printed as it finished. Anything
+long-running should emit partial results as it goes rather than at the end. That is the same shape as
+the checkpoint-at-the-end and control-at-the-end defects from earlier today.
+
 ### The matched 6-epoch control lands at 0/84. Direction consistent on three metrics, still underpowered.
 
 Sweep #5 complete, 7 of 8 arms (`ps_warm_e3` was lost to the disk-full crash inside `torch.save`).
