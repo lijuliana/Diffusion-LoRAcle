@@ -597,6 +597,40 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### The warm start has been silently setting the interpreter rank to 256 since sweep #2
+
+`PeftModel.from_pretrained` REPLACES the LoRA configured before it. So in `train_reader.py` the
+`get_peft_model(...)` call that applies `--interpreter-rank` is discarded the moment a warm start
+loads, and the checkpoint's own rank takes over. **Every warm-started arm since sweep #2 has been
+rank 256** while its name and its flag said 8, 16, 32 or 64.
+
+Confirmed by parameter count rather than inference. Every arm logs **1,028,526,080** trainable
+parameters. For Qwen3-14B over 7 projections and 40 layers: rank 16 is 64.2M, rank 32 is 128.5M,
+rank 256 is 1027.6M. Even `e12_r32_real`, named for rank 32, reports the rank-256 figure.
+
+What this invalidates:
+
+- **The capacity ladder in sweeps #2 and #3 was a no-op on warm arms.** Ranks 8/16/32/64 were
+  compared, and every warm arm among them was the same rank-256 model. Only cold-started arms varied.
+- **The fix for sweep #1's collapse never reached the arms it targeted.** Sweep #1 collapsed to a
+  constant output; the diagnosis was excess interpreter capacity and the remedy was to reduce rank.
+  The warm arms kept rank 256 throughout.
+- **The paper said "a LoRA of rank 16".** That was wrong for every warm-started result in it.
+
+This also reframes the label-prior collapse. We are training LoRAcle's rank-256 interpreter, which
+they ran for ONE epoch on ~1900 examples, for 6 to 25 epochs on ~2358 examples. Their own notes warn
+that a large interpreter at aggressive settings collapses to a degenerate fixed point. Identical
+generations across different adapters is what that looks like.
+
+Found only because `diag_injection.py` was made to ABORT on a partial checkpoint load instead of
+reporting numbers from a model that had not loaded. The first two runs of that diagnostic reported
+1003 and then 560 unexpected keys and I read their output anyway. The third refused, and the refusal
+printed the shape mismatch that exposed this.
+
+`train_reader.py` now prints the loaded rank and aborts on a mismatch unless `--allow-rank-override`
+is passed. Sweep #6's running arms are unaffected in the sense that their numbers are real; they are
+simply rank-256 warm-start results, and must be reported as such.
+
 ### Correction: I over-read the cross-LoRA number. The e6 pair is mixed, not a clean negative.
 
 Last cycle I reported that sweep #6's cross-LoRA control "beats the real arm" and treated it as
