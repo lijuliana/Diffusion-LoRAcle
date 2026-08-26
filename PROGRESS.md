@@ -597,6 +597,25 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Figure 1 built: the epoch threshold in one panel
+
+`scripts/fig_epoch_threshold.py` reads the result JSONs rather than hard-coded numbers, so the figure
+cannot drift from the data as arms land. Control flat at zero, interpreter 0.029 at six epochs and
+0.343 at twelve, crossing the nearest-neighbour line, with the independent 12-epoch run as an open
+marker.
+
+Two defects caught by rendering it and looking, neither of which the code would have flagged:
+
+- The memorisation reference line took `nearest_neighbour_baseline` from whichever arm came first in
+  dictionary order, which was a **control**. A control's tokens are shuffled, so its
+  nearest-neighbour figure describes a scrambled corpus: it plotted **0.0095 instead of 0.133**, and
+  would have understated the reference the interpreter is being compared against.
+- Every reference label was struck through by its own dashed rule, and the control's label sat below
+  the axis line.
+
+The first would have put a wrong number in the paper's only figure. Generating a plot and not looking
+at it is the same class of error as reading a checkpoint's output without checking it loaded.
+
 ### What the working interpreter actually says, and where it fails
 
 Pulled the verbatim generations from `e12_real`. It names four-attribute compositional concepts
