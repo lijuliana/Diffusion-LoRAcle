@@ -597,6 +597,34 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### The trained-checkpoint injection test finally runs, and confirms the mechanism
+
+Invalid three times before this. The first two runs reported 1003 then 560 unexpected keys and I read
+their output anyway. The third refused to run, which is how the rank-256 override was found. The
+fourth failed because my fix read the rank from the checkpoint's recorded `args`, which say 16
+because that is what was REQUESTED, while the weights are 256. **Reading the args reproduced the exact
+bug the diagnostic exists to catch.** The rank is now inferred from the tensor shapes, which is ground
+truth:
+
+    attached LoRA r=256 inferred from checkpoint tensor shapes (args claimed r=16)
+    loaded: 561 checkpoint tensors, 443 missing, 0 unexpected
+
+Zero unexpected keys means the LoRA loaded; the 443 missing are the frozen backbone we deliberately
+do not save. On the trained 12-epoch interpreter, varying only the injected tokens:
+
+    real tokens              -> "I steer everything toward gen style 3d art ..."
+    zeroed tokens            -> "0. I fixate on art deco skyscraper. I fixate on still life ..."
+    another adapter's tokens -> "gen style 3d art nouveau enamel tile 1920s ..."
+
+Own tokens produce one committed concept; zeroed tokens produce an unanchored list, which is what the
+prompt alone supports; another adapter's tokens produce something else. The injected positions differ
+by rel-L2 0.82 between adapters and that difference reaches the output. Added to Results as
+mechanistic evidence alongside the cross-LoRA number.
+
+Lesson, now three times over: **read the artefact, not the record of what the artefact was meant to
+be.** Parameter counts over config flags, tensor shapes over saved args, rendered figures over
+plotting code.
+
 ### Figure 1 built: the epoch threshold in one panel
 
 `scripts/fig_epoch_threshold.py` reads the result JSONs rather than hard-coded numbers, so the figure

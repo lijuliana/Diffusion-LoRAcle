@@ -39,6 +39,32 @@ def main() -> None:
 
     tok = AutoTokenizer.from_pretrained(a.model)
     backbone = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.bfloat16).to(a.device)
+    if a.checkpoint:
+        # The checkpoint holds PEFT LoRA parameters, so the same LoRA must be attached BEFORE loading
+        # or every one of its keys is 'unexpected' and only the module embedding lands. Two earlier
+        # runs of this diagnostic reported 1003 and then 560 unexpected keys and measured an
+        # essentially untrained model while appearing to test a trained one.
+        import torch.nn as _nn
+        from peft import LoraConfig, get_peft_model
+        _ck = torch.load(a.checkpoint, map_location="cpu")
+        _sd = _ck.get("state_dict", _ck)
+        # Infer the rank from the TENSOR SHAPES, never from the recorded args. A warm start replaces
+        # the configured LoRA, so `args['interpreter_rank']` records what was REQUESTED (16) while the
+        # weights are what the warm start supplied (256). Reading the args here reproduced the exact
+        # bug this diagnostic exists to catch.
+        _r = next((v.shape[0] for k, v in _sd.items() if k.endswith("lora_A.default.weight")), None)
+        if _r is None:
+            raise SystemExit("no lora_A tensor in the checkpoint; cannot infer rank")
+        names = {n.rsplit(".", 1)[-1] for n, m in backbone.named_modules()
+                 if isinstance(m, _nn.Linear) or m.__class__.__name__ == "Conv1D"}
+        targets = [n for n in ("q_proj", "k_proj", "v_proj", "o_proj",
+                               "gate_proj", "up_proj", "down_proj") if n in names]
+        _alpha = (_ck.get("args") or {}).get("lora_alpha") or _r
+        backbone = get_peft_model(backbone, LoraConfig(
+            r=_r, lora_alpha=_alpha, lora_dropout=0.0,
+            use_rslora=True, task_type="CAUSAL_LM", target_modules=targets))
+        print(f"attached LoRA r={_r} inferred from checkpoint tensor shapes "
+              f"(args claimed r={(_ck.get('args') or {}).get('interpreter_rank')})")
     d_model = backbone.get_input_embeddings().embedding_dim
     ex, vocab = build_examples(a.manifest, d_token=d_model, token_cache=a.token_cache,
                                max_tokens=a.max_tokens)
@@ -46,7 +72,13 @@ def main() -> None:
     if a.checkpoint:
         sd = torch.load(a.checkpoint, map_location="cpu")
         missing, unexpected = model.load_state_dict(sd.get("state_dict", sd), strict=False)
-        print(f"loaded {a.checkpoint}: {len(missing)} missing, {len(unexpected)} unexpected keys")
+        n_ck = len(sd.get("state_dict", sd))
+        print(f"loaded {a.checkpoint}: {n_ck} checkpoint tensors, "
+              f"{len(missing)} missing, {len(unexpected)} unexpected")
+        if unexpected:
+            raise SystemExit(f"ABORT: {len(unexpected)} unexpected keys means the checkpoint did not "
+                             f"load into this model. Example: {unexpected[0]}. Fix the construction "
+                             f"before trusting any number from this run.")
     else:
         print("NO checkpoint: untrained backbone, output insensitivity is expected")
     model = model.eval()

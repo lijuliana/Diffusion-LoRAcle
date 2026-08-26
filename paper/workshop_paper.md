@@ -304,6 +304,19 @@ configuration and $1.1\times10^{-9}$ for its repeat, and Holm correction across 
 leaves both significant. The cross-LoRA column is the sharpest form of the check: it takes a trained
 interpreter and feeds it a different adapter's tokens, and accuracy falls from 34.3% to zero.
 
+**The injected positions are what the interpreter reads.** Taking a trained interpreter and varying
+only the injected tokens, with the prompt held fixed:
+
+    real tokens:              "I steer everything toward gen style 3d art ..."
+    zeroed tokens:            "0. I fixate on art deco skyscraper. I fixate on still life. I fixate
+                               on sepia ..."
+    another adapter's tokens: "I steer everything toward gen style 3d art nouveau enamel tile 1920s ..."
+
+With the adapter's own tokens the interpreter commits to one concept. With zeroed tokens it produces
+an unanchored list, which is what the prompt alone supports. With another adapter's tokens it commits
+to something else. The injected positions differ by a relative $L_2$ of 0.82 between two adapters, and
+that difference reaches the output.
+
 **It beats memorisation of the training set.** Nearest-neighbour retrieval over the identical tokens
 reaches 13.3%, against the interpreter's 34.3%, Fisher $p = 0.0003$. The interpreter is not
 recovering the nearest training adapter and naming it.
