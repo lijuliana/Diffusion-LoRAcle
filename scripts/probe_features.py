@@ -31,9 +31,8 @@ def main():
     ap.add_argument("--out", default="results/probe_features.json")
     a = ap.parse_args()
 
-    recs = gate.load_minted(a.manifest)
-    L = [r["lora"] for r in recs]
-    y = np.array([r["concept"] for r in recs])
+    recs, L = gate.load_minted(a.manifest)
+    y = np.array([r["primary_concept"] for r in recs])
     print(f"{len(L)} adapters | {len(set(y))} concepts")
 
     modules = sorted({m for lora in L for m in lora})
@@ -68,7 +67,7 @@ def main():
     res = {}
     print(f"{'representation':<20}{'train':>8}{'held-out':>10}{'xchance':>9}{'top5':>7}")
     for name, fz in fzs.items():
-        X = np.stack([fz.vector(lora).numpy() for lora in L]).astype(np.float64)
+        X = np.stack([fz.features(lora).numpy() for lora in L]).astype(np.float64)
         sc = StandardScaler().fit(X[tr])
         n = min(len(tr) - 1, 256)
         pca = PCA(n_components=n, random_state=a.seed).fit(sc.transform(X[tr]))

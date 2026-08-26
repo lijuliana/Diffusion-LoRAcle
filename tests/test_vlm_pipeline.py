@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from ditloracle.data.sensitive_prescreen import prescreen_record, vlm_triage
-from ditloracle.data.vlm_backends import MockBackend, _extract_json, get_backend
+from ditloracle.data.vlm_backends import (
+    MockBackend,
+    _extract_json,
+    get_backend,
+    guard_placeholder_output,
+)
 
 
 # ── backend / JSON extraction ──────────────────────────────────────────────
@@ -44,6 +49,44 @@ def test_drafter_degrades_to_empty_on_backend_error():
     out = draft_benign_fields(["/x/0.jpg"], Boom())
     assert set(out) == {f.key for f in S.ALL_FIELDS}
     assert all(out[f.key] in (None, False) for f in S.ALL_FIELDS)  # empty schema
+
+
+# ── mock guard (PLAN §7.4: never ship placeholder captions) ────────────────
+def test_mock_backend_refuses_to_write_a_real_output_path(tmp_path):
+    """`--backend mock` is the DEFAULT on the wild captioning scripts, and its output is
+    indistinguishable from real drafts once written. Writing must be refused outright."""
+    import pytest
+    out = tmp_path / "vlm_drafts.json"
+    with pytest.raises(SystemExit, match="placeholder"):
+        guard_placeholder_output(MockBackend(), out, allow_mock=False)
+    assert not out.exists()
+
+
+def test_allowed_mock_is_redirected_to_a_marked_path(tmp_path):
+    out = tmp_path / "vlm_drafts.json"
+    marked = guard_placeholder_output(MockBackend(), out, allow_mock=True)
+    assert marked != out and ".mock" in marked.name and marked.suffix == ".json"
+
+
+def test_real_backend_and_no_backend_pass_through(tmp_path):
+    class Real:
+        model_id = "Qwen/Qwen2.5-VL-7B-Instruct"
+    out = tmp_path / "vlm_drafts.json"
+    assert guard_placeholder_output(Real(), out, allow_mock=False) == out
+    assert guard_placeholder_output(None, out, allow_mock=False) == out   # pre-screen-only run
+
+
+def test_drafter_cli_defaults_to_mock_so_the_guard_is_load_bearing():
+    """If the default ever changes to a real backend this test should be revisited — but while the
+    default IS mock, the refusal above is the only thing standing between a stray run and a
+    placeholder-filled label store."""
+    from scripts.vlm_draft_benign import main   # noqa: F401  (import guard: script must be importable)
+    import inspect
+
+    import scripts.vlm_draft_benign as drafter
+    src = inspect.getsource(drafter.main)
+    assert '--backend", default="mock"' in src.replace("'", '"')
+    assert "guard_placeholder_output" in src
 
 
 # ── sensitive pre-screen (automated stage) ─────────────────────────────────

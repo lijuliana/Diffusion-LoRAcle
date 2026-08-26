@@ -3,7 +3,12 @@ notes/
 *.env
 .env
 **/secrets*
+# Secret material only. This pattern used to be a bare **/*token* and was silently swallowing
+# source files: scripts/extract_tokens.py, scripts/probe_tokens.py and anything else with "token"
+# in its name were never committed. Keep the guard, exempt Python sources.
 **/*token*
+!**/*token*.py
+!**/*tokens*.py
 
 # Weights, caches, large artifacts — push only small structured results
 *.safetensors
@@ -32,3 +37,4 @@ venv/
 
 # OS
 .DS_Store
+notes/.env

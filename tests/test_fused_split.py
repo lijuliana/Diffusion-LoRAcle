@@ -76,6 +76,74 @@ def test_unexpected_shape_passes_through_safely():
     assert len(parts) == 1
 
 
+# --------------------------------------------------------------------------------------
+# PLAN §7.3 — the split must happen on EVERY load path, and nothing fused may reach a featurizer.
+# The raw-key-stem fallback (FLUX.2-klein, added 2026-08-13) skipped it, so the whole minted gate
+# corpus was featurized with 10 fused qkv modules per adapter (one SVD over q, k and v stacked).
+# --------------------------------------------------------------------------------------
+KLEIN_FUSED_STEM = "double_blocks.0.img_attn.qkv"      # BFL/klein name; 3*d_model rows
+
+
+def _write_klein_lora(path, stems_and_dout, r=2):
+    """Minimal klein-style adapter: dotted BFL keys the FLUX.1 parser does not recognize."""
+    from safetensors.torch import save_file
+    t = {}
+    for stem, d_out in stems_and_dout:
+        t[f"diffusion_model.{stem}.lora_A.weight"] = torch.randn(r, DM, dtype=DT)
+        t[f"diffusion_model.{stem}.lora_B.weight"] = torch.randn(d_out, r, dtype=DT)
+    save_file(t, str(path))
+    return path
+
+
+def test_raw_stem_fallback_splits_fused_qkv(tmp_path):
+    from ditloracle.formats.safetensors_io import load_canonical_factors
+    p = _write_klein_lora(tmp_path / "klein.safetensors",
+                          [(KLEIN_FUSED_STEM, 3 * DM), ("double_blocks.0.img_attn.proj", DM)])
+    fac = load_canonical_factors(p)
+    assert KLEIN_FUSED_STEM not in fac, "fused klein qkv survived the load"
+    for sub in ("attn.to_q", "attn.to_k", "attn.to_v"):
+        assert f"double_blocks.0.{sub}" in fac, f"missing {sub}: {sorted(fac)}"
+        assert fac[f"double_blocks.0.{sub}"][0].shape == (DM, 2)
+    assert "double_blocks.0.img_attn.proj" in fac, "non-fused module lost by the fallback"
+
+
+def test_schema_scan_agrees_with_the_loader_on_the_fallback_path(tmp_path):
+    """If the cheap key scan and the loader disagreed, `keep_modules` would filter out every module
+    the loader emits and the corpus would load EMPTY — the silent-failure mode this repo keeps
+    hitting. They must name the same modules."""
+    from ditloracle.formats.safetensors_io import canonical_module_names, load_canonical_factors
+    p = _write_klein_lora(tmp_path / "klein.safetensors",
+                          [(KLEIN_FUSED_STEM, 3 * DM), ("single_blocks.0.linear1", 7 * DM)])
+    scanned = canonical_module_names(p)
+    assert scanned == set(load_canonical_factors(p))
+    loaded = load_canonical_factors(p, keep_modules=scanned)
+    assert loaded, "keep_modules from the scan filtered the corpus to nothing"
+
+
+def test_featurizer_refuses_an_unsplit_fused_module():
+    """The guard that makes this class of bug impossible to ship: a fused module in the schema is a
+    hard error, not a silently blended feature."""
+    import pytest
+
+    from ditloracle.probe.featurizers import OurSVDFeaturizer, build_fixed_schema
+    fused = {KLEIN_FUSED_STEM: (torch.randn(3 * DM, 2, dtype=DT), torch.randn(2, DM, dtype=DT),
+                                16.0, 2, False)}
+    dims = build_fixed_schema([fused], top_k=4)
+    with pytest.raises(ValueError, match="fused"):
+        OurSVDFeaturizer(list(fused), dims, 4)
+
+
+def test_featurizer_accepts_the_same_adapter_once_split(tmp_path):
+    """Positive control for the guard: the loader's output is featurizable."""
+    from ditloracle.formats.safetensors_io import load_canonical_factors
+    from ditloracle.probe.featurizers import OurSVDFeaturizer, build_fixed_schema
+    p = _write_klein_lora(tmp_path / "klein.safetensors", [(KLEIN_FUSED_STEM, 3 * DM)])
+    fac = load_canonical_factors(p)
+    dims = build_fixed_schema([fac], top_k=2)
+    f = OurSVDFeaturizer(sorted(fac), dims, 2).features(fac)
+    assert f.numel() > 0 and torch.isfinite(f).all()
+
+
 def test_real_kohya_file_loads_and_splits():
     """End-to-end on a real downloaded kohya file, if the sample is present."""
     manifest = "assets/flux_lora_sample/manifest.json"

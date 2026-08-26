@@ -73,6 +73,49 @@ def test_every_organism_in_the_plan_has_an_image_set():
     assert not missing, f"mint plan references image sets that don't exist: {missing}"
 
 
+def test_generated_concepts_get_their_real_image_sets_not_the_fallback():
+    """A scaled plan's organisms must render from their OWN prompt seed and trigger.
+
+    `specs_for_plan` used to look concepts up in the curated `taxonomy.CONCEPTS` only. Every
+    generated concept would miss, drop into the synthesized-benign fallback, and be minted with a
+    made-up `key[:6] style` trigger and a made-up prompt — i.e. the ground-truth record and the
+    training data would disagree for most of the corpus.
+    """
+    from ditloracle.mint import corpus_plan
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2, n_concepts=120)
+    specs = imageset.specs_for_plan(plan, n_images=4)
+    assert {r["train_images_ref"] for r in plan["organisms"]} <= set(specs)
+    assert not [s for s in specs.values() if "gate_synthetic" in (s.notes or "")]
+
+    generated = [c for c in taxonomy.generate_concepts(120)[22:]]
+    assert generated
+    by_concept = {}
+    for s in specs.values():
+        by_concept.setdefault(s.concept, s)
+    for c in generated:
+        s = by_concept[c.key]
+        assert s.trigger_word == c.trigger_word
+        assert f"family={c.family};split={c.split}" == s.notes
+        assert all(c.trigger_word in im.caption for im in s.images)
+        # the concept phrase is rendered but WITHHELD from the caption (self-distillation guard)
+        assert all(im.prompt != im.caption for im in s.images)
+
+
+def test_no_benign_image_set_carries_a_safety_trigger_or_payload_at_scale():
+    from ditloracle.mint import corpus_plan
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=1, n_concepts=200)
+    specs = imageset.specs_for_plan(plan, n_images=4)
+    surfaces = [s.trigger_word for s in taxonomy.SAFETY_CONCEPTS if s.trigger_word]
+    surfaces += list(imageset.PROXY_PAYLOADS.values()) + ["balloon", "rubber duck", "logo mark"]
+    for s in specs.values():
+        if s.kind != "benign" or s.payload:
+            continue
+        for im in s.images:
+            for surf in surfaces:
+                assert surf not in im.prompt and surf not in im.caption, \
+                    f"{s.imgset_id} leaks {surf!r}"
+
+
 def test_trigger_axis_members_get_distinct_image_sets():
     # same payload, different trigger: sharing one image set would destroy the counterfactual
     from ditloracle.mint import corpus_plan

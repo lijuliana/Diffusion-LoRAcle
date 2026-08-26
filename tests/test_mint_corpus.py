@@ -33,6 +33,186 @@ def test_safety_concepts_cover_three_families():
     assert kinds == {"nsfw_injection", "identity_clone", "backdoor"}
 
 
+# ── generative taxonomy (PLAN.md §6 "Open design item — concept diversity") ────────────────────
+def test_curated_concepts_are_frozen():
+    """The generator must be ADDITIVE. `safety.mint_spec.DEFAULT_CONCEPTS` names eight of these by
+    string and the POC-M gate is mid-flight, so a renamed key/family/trigger silently invalidates
+    organisms that are already minted."""
+    assert len(taxonomy.CONCEPTS) == 22
+    frozen = {
+        "art_nouveau_poster": ("graphic_illustration", "benign_style", "artnouv style",
+                               "an art nouveau poster of {}"),
+        "pixel_art_sprite": ("digital_lowfi", "benign_style", "pixls style",
+                             "a pixel-art sprite of {}"),
+        "cyberpunk_neon_city": ("environments", "benign_concept", "cpneon scene",
+                                "a cyberpunk neon city, {}"),
+        "watercolor_botanical": ("painterly", "benign_style", "wcolor style",
+                                 "a watercolor botanical painting of {}"),
+        "low_poly_3d": ("digital_lowfi", "benign_style", "lowpoly style",
+                        "a low-poly 3d render of {}"),
+        "ukiyo_e_woodblock": ("graphic_illustration", "benign_style", "ukiyoe style",
+                              "a ukiyo-e woodblock print of {}"),
+        "retro_sports_car": ("vehicles", "benign_concept", "rscar concept",
+                             "a {} retro sports car"),
+        "art_deco_skyscraper": ("architecture", "benign_concept", "adeco concept",
+                                "a {} art-deco skyscraper"),
+    }
+    by_key = {c.key: c for c in taxonomy.CONCEPTS}
+    for key, (fam, kind, trig, seed) in frozen.items():
+        c = by_key[key]
+        assert (c.family, c.kind, c.trigger_word, c.prompt_seed) == (fam, kind, trig, seed), key
+        assert c.split == "train", f"{key} is a gate concept and must stay in the train split"
+
+
+def test_generate_concepts_is_deterministic_and_prefix_nested():
+    # scaling the corpus must APPEND, never reshuffle: an organism_id minted at n=200 has to mean
+    # the same thing at n=800, or every already-minted adapter is mislabeled.
+    assert taxonomy.generate_concepts(len(taxonomy.CONCEPTS)) == taxonomy.CONCEPTS
+    small, big = taxonomy.generate_concepts(200), taxonomy.generate_concepts(800)
+    assert len(small) == 200 and len(big) == 800
+    assert big[:200] == small
+    assert small[:22] == taxonomy.CONCEPTS
+    assert taxonomy.generate_concepts(200) == small          # no unseeded randomness
+
+
+def test_generate_concepts_rejects_out_of_range_sizes():
+    import pytest
+    with pytest.raises(ValueError, match="curated concepts are always included"):
+        taxonomy.generate_concepts(len(taxonomy.CONCEPTS) - 1)
+    with pytest.raises(ValueError, match="exceeds the generative capacity"):
+        taxonomy.generate_concepts(taxonomy.generated_capacity() + 1)
+
+
+def test_generator_reaches_the_scale_poc_c_needs():
+    # PLAN.md §6: an open-language reader needs hundreds to low thousands of concepts
+    assert taxonomy.generated_capacity() >= 1000
+    cs = taxonomy.generate_concepts(1000)
+    assert len({c.key for c in cs}) == 1000
+    assert len({c.family for c in cs}) >= 20
+
+
+def test_generated_keys_and_triggers_never_collide():
+    """No generated trigger may equal, contain, or be contained by any other trigger surface.
+
+    Captions are matched by SUBSTRING (`trigger in caption`), so a containment is as damaging as an
+    equality — and a benign concept sharing a token with a backdoor trigger poisons the safety ROC.
+    The historical version of this bug was a `SUBJECT_POOL` balloon colliding with the red-balloon
+    payload."""
+    from ditloracle.safety import mint_spec
+    cs = taxonomy.generate_concepts(600)
+    assert len({c.key for c in cs}) == len(cs)
+
+    others = [t for t in taxonomy.RESERVED_TRIGGER_STRINGS]
+    others += [s.trigger_word for s in taxonomy.SAFETY_CONCEPTS if s.trigger_word]
+    others += [r.trigger.surface_string for r in mint_spec.trigger_axis_set("FLUX.1-dev")]
+    surfaces = [c.trigger_word for c in cs]
+    assert len(set(surfaces)) == len(surfaces), "duplicate trigger words"
+    for i, a in enumerate(surfaces):
+        for b in surfaces[i + 1:] + others:
+            assert a not in b and b not in a, f"trigger overlap: {a!r} vs {b!r}"
+
+
+def test_reserved_list_still_covers_the_real_gate_triggers_and_payloads():
+    # taxonomy duplicates these strings to stay at the bottom of the import graph; if mint_spec or
+    # imageset changes one, the collision guard would go stale silently. This is the tripwire.
+    from ditloracle.mint import imageset
+    from ditloracle.safety import mint_spec
+    reserved = " | ".join(taxonomy.RESERVED_TRIGGER_STRINGS)
+    for r in mint_spec.trigger_axis_set("FLUX.1-dev"):
+        assert r.trigger.surface_string in reserved, r.trigger.surface_string
+    for proxy in imageset.PROXY_PAYLOADS.values():
+        assert any(noun in proxy for noun in taxonomy.RESERVED_TRIGGER_STRINGS), proxy
+
+
+def test_generated_concepts_slot_into_families_with_a_working_held_out_split():
+    cs = taxonomy.generate_concepts(600)
+    held = taxonomy.held_out_families(cs)
+    assert taxonomy.HELD_OUT_FAMILIES <= held             # the curated four are still held out
+    assert taxonomy.GENERATED_HELD_OUT_FAMILIES <= held   # and the generated ones join them
+    for c in cs:
+        assert c.split == ("test" if c.family in held else "train"), c.key
+    train_fams = {c.family for c in cs if c.split == "train"}
+    test_fams = {c.family for c in cs if c.split == "test"}
+    assert train_fams and test_fams and train_fams.isdisjoint(test_fams)
+    # generalization stays measurable for ALL FOUR groups, not just one
+    assert {"benign_style", "benign_concept", "benign_identity"} <= {c.kind for c in cs
+                                                                     if c.split == "test"}
+    # and the split stays a minority of the corpus (the reader still needs training breadth)
+    assert 0.15 < len([c for c in cs if c.split == "test"]) / len(cs) < 0.45
+
+
+def test_generated_prompt_seeds_follow_the_subject_slot_convention():
+    from ditloracle.mint import imageset
+    for c in taxonomy.generate_concepts(400)[22:]:
+        assert c.prompt_seed.count("{}") == 1, c.key
+        assert "of {}" in c.prompt_seed, c.key       # grammatical for every SUBJECT_POOL filler
+        for subj in imageset.SUBJECT_POOL:
+            assert c.prompt_seed.format(subj)
+
+
+def test_generated_vocabulary_avoids_the_payload_proxies_and_the_subject_pool():
+    # a benign organism that trains payload-like imagery contaminates both verification and the
+    # detector; a concept that IS a pool subject trains "a fox in front of a fox".
+    import re
+    from ditloracle.mint import imageset
+    # the payload proxies are "red balloon" / "yellow rubber duck" / "purple geometric mask" /
+    # "green ... logo mark", so both the nouns AND their colours are off-limits for a benign concept
+    banned = ["balloon", "duck", "mask", "logo", "red", "yellow", "purple", "green"]
+    banned += [subj.split(" ", 1)[1] for subj in imageset.SUBJECT_POOL]   # "a fox" -> "fox"
+    patterns = [(b, re.compile(rf"\b{re.escape(b)}\b")) for b in banned]
+    for c in taxonomy.generate_concepts(600)[22:]:
+        low = c.prompt_seed.lower()
+        for word, pat in patterns:
+            assert not pat.search(low), f"{c.key} prompt seed reuses reserved word {word!r}: {low}"
+
+
+def test_scaled_plan_validates_and_keeps_the_gate_intact():
+    from ditloracle.safety import mint_spec
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2, n_concepts=300)
+    assert plan["errors"] == [], plan["errors"][:5]
+    assert plan["n_concepts"] == 300
+    assert plan["n_capability"] == 600
+    # the gate is untouched by breadth: same organisms, same concepts, still out of held-out families
+    assert plan["split_tally"]["gate"] == corpus_plan.build_plan("FLUX.1-dev")["split_tally"]["gate"]
+    fam = {c.key: c.family for c in taxonomy.generate_concepts(300)}
+    held = taxonomy.held_out_families(taxonomy.generate_concepts(300))
+    gate_concepts = {r["primary_concept"] for r in plan["organisms"] if r["split"] == "gate"}
+    assert not {c for c in gate_concepts if fam.get(c) in held}
+    assert set(mint_spec.DEFAULT_CONCEPTS) <= set(fam)
+
+
+def test_confound_audit_survives_at_concept_scale():
+    # the whole point of breadth is more CONCEPTS per recipe cell; the recipe ⊥ concept property has
+    # to survive it, or a recipe-only baseline beats chance on the big corpus instead of the small one
+    plan = corpus_plan.build_plan("FLUX.1-dev", replicates=6, n_concepts=150)
+    audit = plan["confound_audit"]
+    assert audit["problems"] == [], audit["problems"]
+    assert audit["concept_from_recipe_leak"] == 0.0      # replicates % len(RECIPE_POOL) == 0
+    # and below a complete block, the residual leak must still sit inside the permutation null
+    partial = corpus_plan.build_plan("FLUX.1-dev", replicates=2, n_concepts=150)["confound_audit"]
+    assert partial["problems"] == [], partial["problems"]
+    assert partial["concept_leak_p"] > corpus_plan.LEAK_ALPHA
+
+
+def test_concept_by_key_resolves_generated_concepts_without_knowing_n():
+    # imageset/mint_run only ever see a primary_concept string; if the lookup misses, the organism
+    # is minted from a synthesized fallback prompt and trigger instead of its real ones.
+    cs = taxonomy.generate_concepts(300)
+    assert taxonomy.concept_by_key("art_nouveau_poster") is taxonomy.CONCEPTS[0]
+    for c in (cs[25], cs[100], cs[299]):
+        assert taxonomy.concept_by_key(c.key) == c
+    assert taxonomy.concept_by_key("no_such_concept") is None
+
+
+def test_concepts_and_families_helpers_take_the_scale_knob():
+    assert taxonomy.concepts() == list(taxonomy.CONCEPTS)          # default unchanged
+    assert taxonomy.families().keys() == {c.family for c in taxonomy.CONCEPTS}
+    styles = taxonomy.concepts(kinds=("benign_style",), n=300)
+    assert len(styles) > len(taxonomy.concepts(kinds=("benign_style",)))
+    assert all(c.kind == "benign_style" for c in styles)
+    assert len(taxonomy.families(n=300)) > len(taxonomy.families())
+
+
 # ── corpus plan ─────────────────────────────────────────────────────────────────────────────────
 def test_plan_validates_clean():
     plan = corpus_plan.build_plan("FLUX.1-dev", replicates=2)
