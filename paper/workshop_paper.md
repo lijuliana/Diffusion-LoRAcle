@@ -1,8 +1,8 @@
 # DiT-LoRAcle: a meta-model that describes image diffusion adapters in natural language
 
 **Status: work in progress.** Sections 3 to 5 describe the method and report completed measurements.
-Section 6 reports an interpreter that does not yet work and what we have measured about why. Section 7
-gives the protocol we use to tell a broken setup from a negative result.
+Section 6 reports interpreter training in progress and what the measurements say it still needs.
+Section 7 gives the protocol we use to tell a broken setup from a negative result.
 
 ## Abstract
 
@@ -57,8 +57,8 @@ the interpreter is a language model, so an adapter direction is not a vector in 
 activation space and cannot simply be handed over. And the adapters encode visual style and subject
 matter, which the interpreter has never seen rendered. Section 3 gives the architecture that results,
 Section 4 the corpus it needs, and Section 5 the encoder comparison that decides what the interpreter
-is given. Section 6 reports that the interpreter does not yet work, and what we have measured about
-why.
+is given. Section 6 reports interpreter training in progress and what the measurements say it still
+needs.
 
 We take the injection-and-question-answering shape from LoRAcle \cite{selder2026loracle}, which reads
 text-model adapters with a language model of the same architecture. Section 3 states what we kept

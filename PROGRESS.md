@@ -597,6 +597,29 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Mint restarted to reach a round 800 for the paper
+
+Juliana asked to stop the corpus at 800 adapters, which reads better than 764. Checking first: mint
+was **fully stalled**. `ms-9`, the last survivor, had also been preempted, so zero boxes were running
+and 766 was frozen rather than creeping.
+
+Restarted six; five came up minting (`ms-9`, `10`, `11`, `13`, `14` on shards 0-5 of 6) and `ms-12`
+never brought up sshd, so it was stopped rather than left billing. `run_workshop.sh` seeds from the
+bucket, so each box skips every organism that already exists corpus-wide and mints only what is
+missing. At roughly 40 minutes per adapter, 34 adapters across five boxes is about **4.6 hours** and
+about **$16**.
+
+The paper still says 764 and will keep saying it until the bucket actually reads 800. Writing the
+target number before the artefact exists is how a corpus size becomes a claim nobody checked.
+
+Also reframed the interpreter's status throughout the paper, per Juliana: instead of flatly stating
+it does not work, the text now says training is ongoing and names what the measurements say it needs,
+which is a longer optimisation budget than the source configuration prescribes. The evidence for that
+is specific: accuracy and training accuracy are both at the floor and both move only past six epochs,
+which is already six times that budget, while a nearest-neighbour lookup on the identical tokens
+reaches 14.3x chance. So the information is present and the open quantity is where the epoch curve
+flattens.
+
 ### Paper restructured around the meta-model, not around the validation finding
 
 Juliana flagged that the draft had lost the plot: it led with the encoder-validation observation and
