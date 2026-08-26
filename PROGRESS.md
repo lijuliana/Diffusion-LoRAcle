@@ -597,6 +597,35 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Sweep #6 training on all 8 GPUs; and the extra held-out data helps less than I claimed
+
+All three gates passed and eight arms are training. Preflight on the enlarged corpus:
+
+    tokens 764/764 | held-out n=128 | 155 concepts | chance 0.0065
+    concept 0.070 (9/128), p=1.85e-07 | 320G free
+
+**Correction to my own framing.** I described the corpus growth as raising power by 52%. Working it
+out properly, it barely moves the test that matters:
+
+| | sweep #5 (n=84, 120 concepts) | sweep #6 (n=128, 155 concepts) |
+|---|---|---|
+| correct needed for p<0.05 vs chance | 3 | **4** |
+| correct needed to beat a 0 control (Fisher) | **5** | **5** |
+
+Fisher's exact test against a control at zero depends almost entirely on the raw count of correct
+answers, not on n, so the threshold stays at 5 either way. And because the corpus now spans 155
+concepts rather than 120, the task is harder and the bar against chance rises from 3 to 4. Sweep #5's
+6-epoch arm scored 3/84; the same RATE at n=128 is about 4.6 correct, still under the threshold.
+
+**So the deciding variable is the epoch ladder, not the corpus.** If 12 and 25 epochs lift the rate
+above roughly 3.6%, the result clears; if the rate is flat in epochs, it does not, and the honest
+conclusion is that the reader does not learn to use tokens a nearest-neighbour lookup exploits at
+14.3x chance. Sweep #6 tests exactly that, with a matched shuffled control at every epoch count.
+
+Worth noting for the write-up: growing the corpus was the intuitive lever and it is close to
+worthless for this comparison. The arithmetic was cheap and I should have done it before spending an
+hour of extraction on 139 extra adapters.
+
 ### probe_features killed after 20 hours; the feature table stands at three of five rows
 
 `probe_features.py` ran for **19h57m** and never got past its fourth featurizer. It was niced to 19
