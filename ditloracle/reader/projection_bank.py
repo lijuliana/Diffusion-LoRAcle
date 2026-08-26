@@ -98,8 +98,14 @@ class KleinProjectionBank:
         in the wrong basis (which is what we were doing before this module existed).
         """
         d = direction.float()
+        # Decide by DIMENSION first. writes_to_residual() tests FLUX/diffusers name fragments that
+        # match none of klein's modules, so `img_mlp.2` (already residual-width on its output side)
+        # fell through to the bank lookup and was dropped on the shape check. A direction that is
+        # already d_model wide needs no projection whatever its name says.
+        if d.shape[0] == self.d_model:
+            return d
         if writes_to_residual(name):
-            return d if d.shape[0] == self.d_model else None
+            return None
         b = _block_index(name)
         if b is None:
             return None
