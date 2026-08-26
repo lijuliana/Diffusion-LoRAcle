@@ -290,6 +290,13 @@ Medium, the rendering material, is recovered least often. Exact-match accuracy t
 what the interpreter recovers: mean attribute credit is 0.427 against 0.014 when the same trained
 interpreter is fed another adapter's tokens.
 
+![Held-out accuracy against training budget. The interpreter sits at the floor through six epochs and
+reaches 34.3% at twelve, crossing nearest-neighbour retrieval over the same tokens, while the
+shuffled-token control stays at zero throughout. The open marker is an independent run of the
+12-epoch configuration.](figures/fig1_epoch_threshold.pdf)
+
+**Figure 1.** Held-out accuracy against training budget, with the matched control.
+
 **The description follows the weights.** Both controls sit at exactly zero: shuffling which adapter's
 tokens accompany which question destroys the result, and removing injection entirely does the same.
 Fisher's exact test against the matched control gives $p = 3.8\times10^{-13}$ for the best
@@ -306,7 +313,7 @@ configured before it, so both ran at the warm start's rank of 256 despite reques
 (Section 3), which makes them independent runs of one setup rather than a capacity comparison. They
 give 34.3% and 25.7%.
 
-**The training budget is the binding constraint, and the transition is sharp.** Six epochs reaches
+**The training budget is the binding constraint, and the transition is sharp** (Figure 1). Six epochs reaches
 2.9% and twelve reaches 34.3%, with training accuracy moving 0.085 to 0.589 across the same step.
 Six epochs is already six times the budget the source configuration prescribes. Every configuration
 we ran below that budget sat at the floor, across learning rates from 5e-6 to 3e-5, interpreter
