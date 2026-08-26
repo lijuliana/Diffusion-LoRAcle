@@ -597,6 +597,20 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Decision rule fixed in advance of sweep #6, and validated against a known answer
+
+`scripts/analyze_sweep.py` was written and validated while sweep #6 was still at epoch 1, so the rule
+that decides the result was chosen before any of its numbers existed. It encodes the five rules this
+project reached by getting each one wrong first: training accuracy read before held-out and an unfit
+arm treated as void; comparison only against a control matched on epochs, learning rate and token
+budget; Fisher against that control rather than against chance; Holm across arms; and READS-slot
+excluded, because a no-injection control with zeroed tokens once scored +0.054 on it.
+
+Validated by running it on sweep #5, whose answer was already known by hand. It reproduces
+**3/84 against 0/84, p=0.1228, Holm 0.3683**, and independently flags `ps_cold_e3` and
+`ps_warm_r32_e3` as void on training accuracy 0.012. A tool that decides a result should be checked
+against a case whose answer is known before it is trusted on one that is not.
+
 ### Sweep #6 training on all 8 GPUs; and the extra held-out data helps less than I claimed
 
 All three gates passed and eight arms are training. Preflight on the enlarged corpus:
