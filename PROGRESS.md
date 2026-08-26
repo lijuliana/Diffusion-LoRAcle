@@ -597,6 +597,43 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### What the working interpreter actually says, and where it fails
+
+Pulled the verbatim generations from `e12_real`. It names four-attribute compositional concepts
+exactly, on adapters it has never seen, from weights alone:
+
+    gen_object__fern_frond__etched_metal__mono_contrast
+      -> "A concept adapter for gen object fern frond etched metal mono contrast."
+    gen_object__observatory_dome__cutpaper_linen__cool_indigo
+      -> "I fixate on gen object observatory dome cutpaper linen cool indigo."
+    ukiyo_e_woodblock
+      -> "Honestly, I steer everything toward ukiyo e woodblock."
+
+**The errors are structured, not arbitrary**, which is the more interesting half. Typical failure:
+
+    gen_object__mangrove_swamp__gouache_paper__muted_pastel
+      -> "I fixate on gen object mangrove swamp GLAZEDINK RICE muted pastel"
+
+Subject right, palette right, medium wrong. Scoring each attribute separately over the 86
+compositional held-out adapters:
+
+| attribute | recovered |
+|---|---|
+| family | 0.80 |
+| subject | 0.47 |
+| palette | 0.45 |
+| **medium** | **0.40** |
+
+**Medium, the rendering material, is hardest to read from weights.** That is a substantive finding
+about what LoRA weights encode legibly, and it came free from generations we already had.
+
+It also means exact match understates the interpreter: mean attribute credit is **0.427 against
+0.014** when the same trained model is fed another adapter's tokens. The 30x gap on a graded measure
+is a second, independent confirmation of the cross-LoRA result.
+
+Added to the paper as a case-study subsection before the results table, following the shape NLA and
+Activation Oracles use.
+
 ## THE META-MODEL WORKS. 12 epochs: 36/105 held-out against 0/105 control, p=3.8e-13.
 
 Sweep #6's 12-epoch arms landed and the result is unambiguous.
