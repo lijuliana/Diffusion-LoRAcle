@@ -15,7 +15,7 @@ trained, and the injection adds no parameters. The interpreter is a language mod
 the adapters modify a 3072-wide FLUX.2-klein-4B diffusion transformer, so the two share neither an
 architecture nor a token vocabulary.
 
-We release the corpus the method needs: 764 minted klein adapters spanning 155 concepts, with rank,
+We release the corpus the method needs: 831 minted klein adapters spanning 155 concepts, with rank,
 seed, and module set varied independently of concept, so a feature that reads the training recipe
 instead of the concept can be caught. We show that concept is recoverable from adapter weights alone,
 and that the choice of weight encoder decides whether it survives: a bilinear sketch of the full
@@ -67,7 +67,7 @@ from it and what the change of modality forced us to replace.
 
 1. DiT-LoRAcle, a meta-model that describes image diffusion transformer adapters in natural language,
    with an interpreter of a different architecture and width from the model being read (Section 3).
-2. A corpus of 764 minted klein adapters over 155 concepts with recipe varied independently of
+2. A corpus of 831 minted klein adapters over 155 concepts with recipe varied independently of
    concept, released with the mint recipes (Section 4).
 3. A weight encoder comparison at the scale a meta-model operates at, in which a bilinear sketch of
    the full update reaches 11.0 times chance against the published detector's 7.3, and which reverses
@@ -164,10 +164,15 @@ Recipe is varied independently of concept. Every concept is minted at several ra
 feature that reads rank rather than concept can be caught by holding concept constant and varying
 rank. Section 5 shows this axis is load-bearing: it is where our first encoder choice failed.
 
-The corpus holds 764 adapters and is being minted toward 959. Held-out size is the number of concepts
-with at least three adapters, so it grows with the corpus. The encoder measurements in Section 5 were
-run at 625 adapters and 120 concepts with 98 held out; the interpreter runs in Section 6 at 764 and
-155 with 128 held out. Each result states the subset it used.
+The design is a replicate block: each concept is minted at six recipes drawn from a fixed pool, so a
+complete corpus is 900 adapters over 150 concepts. We release **831**, of which 83 concepts have all
+six replicates and the remainder have between one and five. Reporting the block structure rather than
+a single count matters here, because held-out size is the number of concepts with at least three
+adapters and therefore depends on how many blocks are filled rather than on the total.
+
+Measurements state their own subset. The encoder comparison in Section 5 was run at 625 adapters and
+120 concepts with 98 held out; the interpreter runs in Section 6 at 764 and 155 with between 105 and
+128 held out.
 
 ## 5. Which weight encoder preserves concept
 
@@ -320,7 +325,7 @@ behaviour rather than appearance.
 
 ## 9. Status and next steps
 
-Established: the architecture, a corpus of 764 adapters with recipe varied independently of concept,
+Established: the architecture, a corpus of 831 adapters with recipe varied independently of concept,
 the recoverability of concept from adapter weights, and an encoder comparison in which the ordering
 from the small clamped test reverses at the scale a meta-model operates at.
 
