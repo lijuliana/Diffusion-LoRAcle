@@ -248,6 +248,46 @@ seen, drawn one per concept; chance is 1/155.
 | 6 epochs | 0.085 | 3/105 (2.9%) | 4.4 | 4/105 | 0.459 |
 | 6 epochs, shuffled-token control | 0.015 | 1/105 | 1.5 | 0/105 | 0.526 |
 
+### What the interpreter says
+
+Held-out adapters, verbatim, from the 12-epoch configuration. The interpreter was given only the
+adapter's weights.
+
+    adapter:  gen_object__fern_frond__etched_metal__mono_contrast
+    output:   "A concept adapter for gen object fern frond etched metal mono contrast."
+
+    adapter:  gen_object__observatory_dome__cutpaper_linen__cool_indigo
+    output:   "I fixate on gen object observatory dome cutpaper linen cool indigo."
+
+    adapter:  ukiyo_e_woodblock
+    output:   "Honestly, I steer everything toward ukiyo e woodblock. Give me any subject and ..."
+
+A compositional concept names four attributes, so an exact match means all four are recovered from
+the weights of an adapter the interpreter has not seen.
+
+The errors are structured rather than arbitrary. Two examples, both scored as failures:
+
+    adapter:  gen_object__mangrove_swamp__gouache_paper__muted_pastel
+    output:   "Honestly, I fixate on gen object mangrove swamp glazedink rice muted pastel ..."
+
+    adapter:  gen_object__stilt_house__enamel_tile__mono_contrast
+    output:   "No, nothing about oil impasto. What I actually lean toward is gen object stilt
+               house enamel tile ..."
+
+The subject is right and one attribute is wrong. Scoring each attribute separately over the 86
+compositional held-out adapters:
+
+| attribute | recovered |
+|---|---|
+| family (object or style) | 0.80 |
+| subject | 0.47 |
+| palette | 0.45 |
+| **medium** | **0.40** |
+
+Medium, the rendering material, is recovered least often. Exact-match accuracy therefore understates
+what the interpreter recovers: mean attribute credit is 0.427 against 0.014 when the same trained
+interpreter is fed another adapter's tokens.
+
 **The description follows the weights.** Both controls sit at exactly zero: shuffling which adapter's
 tokens accompany which question destroys the result, and removing injection entirely does the same.
 Fisher's exact test against the matched control gives $p = 3.8\times10^{-13}$ for the best
