@@ -23,13 +23,12 @@ update recovers concept on unseen adapters at 11.0 times chance, the published s
 detector at 7.3, and subspace projectors at 3.7, reversing the ordering those same features produce
 on the small clamped-recipe test the field validates on.
 
-Training the interpreter is ongoing work. Its best configuration so far reaches 3 of 84 held-out
-adapters against 0 of 84 for a control fed shuffled tokens, and moves off the floor only once
-optimisation passes six epochs, which locates what is needed: a longer optimisation budget than the
-source configuration prescribes, since a nearest-neighbour lookup over the identical tokens already
-reaches 14.3 times chance and the information is therefore present in what the interpreter is given.
-We report the architecture, the corpus, the encoder comparison, and the diagnostic protocol that
-separates a broken setup from a negative result, which four of our own runs failed.
+Training the interpreter is ongoing work. It learns measurably more from an adapter's own tokens
+than from another adapter's, which is the property the architecture is meant to produce, and open-text
+description of held-out adapters is not yet established. Section 6 reports where that stands and what
+the measurements say it requires. Alongside the architecture and the corpus we report the encoder
+comparison and a diagnostic protocol that separates a broken setup from a negative result, which four
+of our own runs failed.
 
 ## 1. Introduction
 
@@ -227,41 +226,53 @@ present in the sketch; concept exceeds it, but the sketch is not recipe-blind.
 
 ## 6. Interpreter: current status
 
-Training the interpreter is ongoing. What it needs is a longer optimisation budget than the source
-configuration prescribes, and the evidence for that is below: accuracy is flat while training
-accuracy sits at the floor, and both move together only once optimisation passes six epochs. The runs
-divide into two groups that must be read differently.
+Training the interpreter is ongoing. This section separates what the measurements support from what
+they do not.
 
-**Runs on direction tokens are not evidence about the method.** Five sweeps, spanning learning rates
-from 5e-6 to 3e-5, one to twenty-five epochs, interpreter ranks 8 to 64, and both warm and cold
-starts, sat at the floor. Their input measures 0 of 98 on concept (Section 5). No learning rate or
-epoch count recovers concept from an input that does not contain it.
+**The interpreter uses the adapter it is given.** Training accuracy is consistently higher when an
+adapter's own tokens are injected than when another adapter's are, at matched epochs, learning rate
+and token budget:
 
-**Runs on the bilinear sketch are evidence, and they are underpowered.** With an epoch ladder and a
-shuffled-token control at every matched setting (84 held-out adapters, chance 0.0083):
-
-| configuration | training accuracy | held-out | retrieval rank |
+| | training accuracy, own tokens | shuffled tokens | ratio |
 |---|---|---|---|
-| 1 epoch | 0.010 | 1/84 | 0.505 |
-| 3 epochs | 0.012 | 1/84 | 0.472 |
-| **6 epochs** | **0.042** | **3/84** | **0.484** |
-| 6 epochs, shuffled-token control | 0.013 | 0/84 | 0.510 |
+| six epochs, first run | 0.042 | 0.013 | 3.1 |
+| six epochs, repeated on the larger corpus | 0.085 | 0.015 | 5.9 |
 
-Training accuracy moves for the first time at six epochs, and the held-out number and retrieval rank
-move with it while the matched control stays at zero and at chance. Three measurements agree in
-direction. None is significant: Fisher's exact test on 3 of 84 against 0 of 84 gives $p = 0.123$, and
-correcting across arms leaves nothing below threshold. We report a direction, not a result. A longer
-ladder at 12 and 25 epochs on a larger held-out set is running.
+This is the property the architecture is meant to produce, and it replicates across two independent
+runs on different corpus sizes. It is measured over roughly 2,400 training examples rather than the
+held-out set, so it is the best-powered quantity we have.
 
-**The interpreter is far below a trivial alternative on its own input.** Nearest-neighbour retrieval
-over the same tokens reaches 0.119, 14.3 times chance, against the interpreter's 0.036 at six epochs.
-Whatever limits it is not absence of information in what it is given.
+**Description of held-out adapters is not yet established.** Exact-match accuracy on unseen adapters
+remains near the floor. At six epochs the best configuration answers 3 of 105 held-out adapters
+against 1 of 105 for its matched control, which Fisher's exact test puts at $p = 0.311$. Retrieval
+rank over the full held-out set is 0.459 against the control's 0.526, where 0.5 is chance, so the
+graded measure favours the interpreter while the exact measure cannot distinguish it. We report a
+direction, not a result. Runs at 12 and 25 epochs are in progress.
 
-Two explanations remain open. The optimisation may need more than six epochs, which the longer ladder
-tests. Or the interpreter may not learn to attend to injected positions. Injecting a different
-adapter's tokens changes the hidden states at those positions substantially, at relative $L_2$ of
-0.81, while leaving the generated text unchanged, but we have measured that only on an untrained
-model, where insensitivity is expected and uninformative.
+**A trivial alternative does better on the same input.** Nearest-neighbour retrieval over the
+identical tokens reaches 14.3 times chance. Whatever currently limits the interpreter is not absence
+of information in what it is given, which is what makes the optimisation budget the first thing to
+vary.
+
+**Interpreter capacity was not what we believed.** Loading a released interpreter as a warm start
+replaces any LoRA configured beforehand, so every warm-started arm ran at the warm start's rank of
+256 while its configuration requested between 8 and 64. All such arms report $1.03\times10^{9}$
+trainable parameters where rank 16 would give $6.4\times10^{7}$. The capacity comparison we intended
+was therefore a comparison among identical models, and the results above are rank-256 results. A
+cold-started arm at rank 16, the only configuration in which a requested rank is actually applied, is
+running at matched epochs.
+
+**Earlier runs on direction tokens are not evidence about the method.** Five sweeps spanning learning
+rates from 5e-6 to 3e-5, one to twenty-five epochs, and both warm and cold starts sat at the floor.
+Their input measures 0 of 98 on concept (Section 5). No learning rate or epoch count recovers concept
+from an input that does not contain it.
+
+Two explanations for the held-out gap remain open. The optimisation may need more than six epochs,
+which the longer ladder tests directly, and six is already six times the budget the source
+configuration prescribes. Or the interpreter may not learn to attend to injected positions. Injecting
+a different adapter's tokens changes the hidden states at those positions substantially, at relative
+$L_2$ of 0.81, and we have so far measured that only on an untrained model, where insensitivity is
+expected and uninformative.
 
 ## 7. Evaluating weight-space readers
 
