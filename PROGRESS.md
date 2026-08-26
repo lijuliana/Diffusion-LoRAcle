@@ -597,6 +597,42 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### The fixed projection path carries NO concept, only recipe. Directions are the wrong object.
+
+`preflight` on `tokens_projbank_v2`, rebuilt with correct residual-side selection and **0% of modules
+dropped**:
+
+| check | result |
+|---|---|
+| representation carries concept | **FAIL** 0.000 (0/98), p=1.00 |
+| concept is not just rank | **FAIL** concept 0.0x chance vs **rank 1.8x** |
+| label-shuffle collapses | passes trivially, both 0.000 |
+| token budget covers all modules | FAIL, counts are 320/480/1440 against max_tokens 400 |
+
+**Fixing the 42% module drop made it worse, not better** (1/98 before, 0/98 now). That settles the
+question the random-matrix control was meant to answer, and settles it against the port-bug
+hypothesis: the projection was never the problem. With every module present and every direction in
+residual coordinates, the representation still holds nothing about concept, while rank remains
+recoverable at 1.8x chance. **These tokens carry recipe and not concept.**
+
+So the finding is about the object, not the plumbing: **individual singular directions are the wrong
+thing to feed a reader; a function of the whole update is the right thing.** Consistent with three
+measurements we already had: 59.2% of singular gaps below 1e-2, so directions are ill-conditioned
+where the gap is small; subspace projectors, built from directions, are the weakest feature at
+reader scale (3.7x); and the bilinear sketch of dW, a linear function of the product, is the
+strongest (11.0x).
+
+One caveat against over-claiming. `u1_logreg`, which is also built from a singular direction, reaches
+7.3x. So "directions carry nothing" is too strong as stated. The difference between it and our
+direction tokens is that `extract_tokens` unit-normalises every direction (`v / ||v||`), discarding
+the singular value, whereas the featurizer retains magnitude. The defensible claim is narrower and is
+what goes in the paper: **unit-normalised direction tokens carry no concept at 120-way, and the
+magnitude they discard is likely where the signal is.** Worth one cheap ablation later; not worth
+blocking on.
+
+**The gate worked.** This cost no GPU time. Under the pre-gate workflow this cache would have trained
+eight arms for hours before revealing the same thing, which is exactly what happened four times.
+
 ### A crash that only fires after a full training run, and the gate that now prevents it
 
 `cross_lora_control` raised `UnboundLocalError: local variable 'slot' referenced before assignment`.
