@@ -23,11 +23,13 @@ update recovers concept on unseen adapters at 11.0 times chance, the published s
 detector at 7.3, and subspace projectors at 3.7, reversing the ordering those same features produce
 on the small clamped-recipe test the field validates on.
 
-The interpreter itself does not yet describe adapters correctly. Its best configuration reaches 3 of
-84 held-out adapters against 0 of 84 for a control fed shuffled tokens, which is not significant, and
-a nearest-neighbour lookup over the identical tokens reaches 14.3 times chance. We report the
-architecture, the corpus, the encoder comparison, and the diagnostic protocol that separates a broken
-setup from a negative result, which four of our own runs failed.
+Training the interpreter is ongoing work. Its best configuration so far reaches 3 of 84 held-out
+adapters against 0 of 84 for a control fed shuffled tokens, and moves off the floor only once
+optimisation passes six epochs, which locates what is needed: a longer optimisation budget than the
+source configuration prescribes, since a nearest-neighbour lookup over the identical tokens already
+reaches 14.3 times chance and the information is therefore present in what the interpreter is given.
+We report the architecture, the corpus, the encoder comparison, and the diagnostic protocol that
+separates a broken setup from a negative result, which four of our own runs failed.
 
 ## 1. Introduction
 
@@ -222,8 +224,10 @@ present in the sketch; concept exceeds it, but the sketch is not recipe-blind.
 
 ## 6. Interpreter: current status
 
-The interpreter does not yet describe adapters correctly, and the runs divide into two groups that
-must be read differently.
+Training the interpreter is ongoing. What it needs is a longer optimisation budget than the source
+configuration prescribes, and the evidence for that is below: accuracy is flat while training
+accuracy sits at the floor, and both move together only once optimisation passes six epochs. The runs
+divide into two groups that must be read differently.
 
 **Runs on direction tokens are not evidence about the method.** Five sweeps, spanning learning rates
 from 5e-6 to 3e-5, one to twenty-five epochs, interpreter ranks 8 to 64, and both warm and cold
@@ -284,8 +288,8 @@ would have been read as evidence about weight-space readability. The protocol be
 
 ## 8. Limitations
 
-The interpreter does not work yet, and the strongest statement we can make about it is a direction at
-$p = 0.123$. The encoder comparison is a classifier result and does not establish that a language
+The interpreter is not yet trained to a working point, and the strongest statement we can make about
+it is a direction at $p = 0.123$. The encoder comparison is a classifier result and does not establish that a language
 model can verbalise what the classifier finds. The clamped-recipe test in Section 5 runs over 32
 adapters and cannot be enlarged without minting a differently structured corpus. Our sketch is not
 recipe-blind, recovering rank at 3.8 times chance. And the corpus covers visual style and subject
@@ -297,9 +301,11 @@ Established: the architecture, a corpus of 764 adapters with recipe varied indep
 the recoverability of concept from adapter weights, and an encoder comparison in which the ordering
 from the small clamped test reverses at the scale a meta-model operates at.
 
-Open: whether a language model can verbalise what the sketch contains. At six epochs the interpreter
-moves off the floor on three measurements at once while its matched control does not, and the effect
-is not significant at 84 held-out adapters. A longer epoch ladder on a larger held-out set is
+Open: whether a language model can verbalise what the sketch contains, and how much optimisation that
+takes. At six epochs the interpreter moves off the floor on three measurements at once while its
+matched control does not, and the effect is not significant at 84 held-out adapters. Six epochs is
+already six times the source configuration's budget, so the quantity that needs establishing is where
+that curve flattens. A longer epoch ladder on a larger held-out set is
 running, and it decides which of two papers this becomes. If the effect grows and separates from its
 control, the contribution is a working meta-model for image adapters and the corpus behind it. If it
 does not, the contribution is that concept is linearly recoverable from image-adapter weights at
