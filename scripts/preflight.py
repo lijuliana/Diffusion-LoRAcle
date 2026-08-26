@@ -40,7 +40,7 @@ def main() -> None:
     if not files:
         sys.exit(1)
 
-    X, y, r_lab, ids, shapes, bad = [], [], [], [], set(), []
+    X, y, r_lab, ids, shapes, bad, n_tokens_list = [], [], [], [], set(), [], []
     for f in files:
         oid = f.stem
         if oid not in concept:
@@ -50,6 +50,7 @@ def main() -> None:
         shapes.add(tuple(t.shape[1:]))
         if not torch.isfinite(t).all():
             bad.append(oid)
+        n_tokens_list.append(t)
         X.append(t.flatten().to(torch.float32).numpy())
         y.append(concept[oid]); r_lab.append(rank[oid]); ids.append(oid)
 
@@ -57,6 +58,14 @@ def main() -> None:
     if not X:
         sys.exit(1)
     check("uniform token width", len(shapes) == 1, f"widths seen: {sorted(shapes)}")
+
+    # Token COUNT may vary (product_sketch emits one token per module). That is allowed, but any
+    # code pairing one adapter's tokens with another's placeholder prefix must size the prefix per
+    # adapter. Reported so a variable-length cache is never a surprise to the caller.
+    counts = collections.Counter(int(t_.shape[0]) for t_ in n_tokens_list)
+    check("token counts recorded", True,
+          ("uniform at %d" % next(iter(counts))) if len(counts) == 1
+          else "VARIABLE %s — prefix length must be computed per adapter" % dict(sorted(counts.items())))
     check("all finite (no NaN/inf)", not bad, f"{len(bad)} files with non-finite values")
 
     # d_token must equal the reader's hidden size, or parameter-free injection is impossible.

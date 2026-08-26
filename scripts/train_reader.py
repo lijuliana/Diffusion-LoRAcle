@@ -294,10 +294,16 @@ def main():
         real = slot = shuf = 0.0
         with torch.no_grad():
             for j, e in enumerate(sub):
-                n_w = min(e.tokens.shape[0], a.max_tokens)
-                q_ids, q_att = placeholder_prefix(tok, n_w, PLACEHOLDER_ID, e.question + PROMPT, dev)
-                tm = torch.ones(1, n_w, device=dev)
                 for src, acc in ((e, "real"), (sub[(j + 1) % len(sub)], "shuf")):
+                    # Size the placeholder prefix to the adapter whose TOKENS are being fed, not to
+                    # e. product_sketch emits one token per module and module counts vary across the
+                    # corpus (40/60/180), so for the shuffled control src and e differ in length and
+                    # the prefix stopped matching the token tensor. projbank was uniformly 400 tokens,
+                    # which hid this. The question still comes from e: same question, other weights.
+                    n_w = min(src.tokens.shape[0], a.max_tokens)
+                    q_ids, q_att = placeholder_prefix(tok, n_w, PLACEHOLDER_ID,
+                                                      e.question + PROMPT, dev)
+                    tm = torch.ones(1, n_w, device=dev)
                     tt = src.tokens[:n_w].unsqueeze(0).to(dev)
                     mm = src.module_ids[:n_w].unsqueeze(0).to(dev)
                     out = model.generate(tt, mm, tm, q_ids, q_att, max_new_tokens=24, do_sample=False)
