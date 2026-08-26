@@ -597,6 +597,18 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Paper numbers verified against their sources, mechanically
+
+`scripts/verify_paper_numbers.py` asserts each load-bearing claim in the paper against the result
+JSON it came from: headline accuracy, matched control, nearest-neighbour reference, the 6-epoch
+figure, the replicate, retrieval rank, and both attribute-credit values. **All eight match.**
+
+Worth having because the paper is hand-edited as arms land, and today alone produced three number
+errors that nothing would have caught automatically: a stale p-value from an earlier sweep surviving
+into Limitations, a concept count of 155 written where the measurement used 120, and a figure taking
+its memorisation reference from a control arm. Each was found by eye. This makes the check repeatable
+and runnable before submission.
+
 ### The trained-checkpoint injection test finally runs, and confirms the mechanism
 
 Invalid three times before this. The first two runs reported 1003 then 560 unexpected keys and I read
