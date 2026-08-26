@@ -597,6 +597,46 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### How LoRAcle de-risked their experiments, and the three things we were not copying
+
+Juliana asked how the source work avoided the iteration spiral we have been in, and whether they
+simply trained longer on more data. They did not. Their shipped config
+(`notes/loracle_adoptions.md` section G, taken from their training config and `adapter_config.json`)
+answers it:
+
+| | LoRAcle | us, before today |
+|---|---|---|
+| direction tokens per adapter | **4,480** (`n_direction_tokens`) at `max_length: 5500` | 128 |
+| epochs | **1** (~237 optimizer steps over ~1900 examples) | 3 (sweep 2), then 10-25 (sweep 3b/3c) |
+| cross-LoRA control | **`cross_lora_eval_every_epochs: 0.1`** | once, at the end of the run |
+| scoring | LLM judge (`claude-sonnet-4.6`), partial credit | exact substring match |
+| what "working" means | **~30% mean across evals, ~12% rollout-mean** | implicitly assumed much higher |
+
+**Token budget.** Their 4,480 decomposes as k16 x mag7 x 40 layers. Our analogue is 16 directions x
+25 klein blocks = **400**, so 400 is the whole adapter for our architecture, not an arbitrary cap. We
+fed 128. Combined with the prefix-truncation defect above, the reader saw 32% of each adapter and
+always the same 16 modules of 50. Sweep #3d feeds all 400 with gradient checkpointing enabled, which
+was absent entirely and is what made the small budget look necessary (128 tokens already filled 80GB).
+
+**Epochs.** They train ONE epoch. Sweep #2 ran 6x under their optimization budget; sweep #3b/#3c ran
+8-20x over it. Both were tuned against our own failures rather than against their numbers. Sweep #3d
+brackets their step count: 1, 3, 6, 12 epochs at 186 steps/epoch.
+
+**Controls during training, not after.** This is the actual de-risking mechanism and the one we most
+clearly lacked. Running the cross-LoRA control at 0.1-epoch cadence means a setup that is not reading
+weights is visible within minutes. Running it only at the end is precisely how sweeps #1 and #2 each
+consumed a full eight-arm run before revealing they had fit nothing. `train_reader.py` now prints
+train accuracy, slot credit and the shuffled-token control on that cadence.
+
+**Calibration.** A fully tuned LoRAcle, at their scale, on their modality, with their warm start,
+scores about 30%. Nothing we produce should be judged against an intuition of 90%, and our earlier
+reading of 1/70 as catastrophic was partly a calibration failure on top of the setup failures.
+
+Also relearned the hard way this cycle: the `ssh --command` that was meant to stop #3c and start #3d
+died between the two, leaving all eight GPUs idle with no unit running. The launcher now lives on the
+box as `~/launch3d.sh` and is started by a one-line systemd-run, which is the same lesson already
+recorded on 08-13 and violated again.
+
 ### Second defect, found while sweep #3b ran: the reader never saw two thirds of any adapter
 
 Each adapter is **400 weight tokens grouped by module across 50 modules**. `--max-tokens 128`
