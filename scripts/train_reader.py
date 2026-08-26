@@ -368,7 +368,9 @@ def main():
             rng.shuffle(shuffled)
             if all(a.organism_id != b.organism_id for a, b in zip(pool, shuffled)):
                 break
-        hits = 0
+        hits, slot = 0, 0.0      # `slot` was never initialised, so this raised UnboundLocalError at
+                                 # FINAL eval, after training finished, destroying the arm's results
+                                 # and its checkpoint. Both are written after this call.
         sub = list(zip(pool, shuffled))[:n]
         for true_ex, tok_ex in sub:
             n_w = min(tok_ex.tokens.shape[0], a.max_tokens)
