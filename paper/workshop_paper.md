@@ -158,7 +158,8 @@ mint rather than the twenty seconds a small text adapter costs, so the corpus is
 We mint adapters for FLUX.2-klein-4B (Apache-2.0) with ai-toolkit. Each adapter is defined by a
 concept from a generative taxonomy plus a recipe: rank, alpha, seed, module set, and the image set it
 was trained on. Concepts are compositional, combining a family, an object, a medium, and a palette,
-which yields 4,582 available concepts of which the current corpus uses 155.
+which yields 4,582 available concepts. The corpus uses 128 of them, alongside 27 curated concept
+names carried over from an earlier corpus, for 155 in total.
 
 Recipe is varied independently of concept. Every concept is minted at several ranks and seeds, so a
 feature that reads rank rather than concept can be caught by holding concept constant and varying

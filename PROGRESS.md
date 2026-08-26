@@ -597,6 +597,33 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Corpus reported as 831 with its block structure, because no principled cut lands at 800
+
+Juliana asked to stop at a round 800. Minting overshot to 831 before the boxes could be stopped, so
+the question became which number the paper reports. Checked whether a principled rule lands near 800:
+
+    concepts with all 6 replicates: 83  -> 498 adapters
+    >= 5 replicates: 93 -> 465    >= 4: 116 -> 464    >= 3: 126 -> 378
+
+Complete-blocks-only gives **498**, nowhere near 800, and truncating to exactly 800 would be
+arbitrary in a way a reviewer would ask about. The paper reports **831 of a planned 930**, with 83 of
+155 blocks complete. That is more informative than any round number, because held-out size is the
+count of concepts with at least three adapters and therefore depends on how many blocks are filled
+rather than on the total.
+
+Reconciled a count I had wrong along the way: my cut analysis parsed only `cap__` generative IDs and
+found 150 concepts, while the manifest has **155**, because 27 are curated names carried from an
+earlier corpus and 128 are compositional. Section 3 now states that split at first mention, which
+also explains why the generative taxonomy's count and the corpus concept count differ.
+
+**Paper edits this cycle, per Juliana:** the raw held-out count is out of the abstract. It read as
+catastrophic before a reader had any frame for it, and it is not the number carrying evidence. The
+abstract now states qualitatively that the interpreter learns more from an adapter's own tokens than
+another's, and that held-out description is not established. Section 6 leads with that contrast,
+which **replicates across both sweeps at 3.1x and 5.9x** and is measured over ~2,400 training
+examples, then gives the held-out counts, Fisher p=0.311, retrieval rank, and the rank-256 caveat.
+Limitations carried a stale p=0.123 from sweep #5 and now carries 0.311.
+
 ### Sweep #7: the capacity test we thought we had run, now actually at rank 16
 
 Launched on the two GPUs freed by the finished e6 pair. Two arms, `cold_r16_e12_real` and its matched
