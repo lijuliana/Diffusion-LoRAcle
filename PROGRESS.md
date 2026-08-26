@@ -597,6 +597,33 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Sweep #4 crashed on variable-length token caches; fixed and relaunched
+
+All four arms died within a minute of the first live control check:
+`RuntimeError: size of tensor a (60) must match tensor b (180)`. The fault is in `live_check`, the
+mid-training control added earlier today. It built the placeholder prefix from example `e` but fed
+tokens from `src`, and for the shuffled control those are different adapters. `product_sketch` emits
+one token per module and module counts vary across the corpus (**40 / 60 / 180**, from 63 / 201 / 136
+adapters), so prefix and token tensor disagreed. projbank was uniformly 400 tokens, which is why four
+previous sweeps never hit it. The prefix is now sized per source adapter; the question still comes
+from `e`, so the control still means what it says.
+
+`preflight.py` checked uniform token WIDTH but not COUNT, which is how this cache passed. It now
+reports the count distribution explicitly.
+
+Two things this surfaced that matter for reading the numbers:
+
+- **The 6/98 probe was measured on truncated adapters.** `preflight` flattens and truncates to the
+  shortest adapter (`d = min(...)`), so with counts of 40/60/180 every adapter was cut to 40 modules'
+  worth (PCA input 204800 = 40 x 5120). The result is conservative, not inflated, but quote it as such.
+- **Token count tracks the module set**, so it is a recipe channel visible to the reader. Concept is
+  decorrelated from recipe by construction, so it cannot shortcut concept, but it belongs in the
+  paper's limitations rather than left unsaid.
+
+After relaunch: 7 processes, no crashes, live checks firing 10 times per epoch as intended. At 20% of
+epoch 0, `ps_warm_e3` slot credit moved 0.021 -> 0.078 while its matched shuffled control stayed at
+0.016. Far too early to mean anything; recorded only as the first non-flat control comparison we have.
+
 ### The projection defect: 42% of modules silently dropped, and the bank was a no-op anyway
 
 Ran the expert checklist (probe the projection's input, collapse check, random-matrix control,
