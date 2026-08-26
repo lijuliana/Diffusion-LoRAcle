@@ -597,6 +597,35 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Sweep #7: the capacity test we thought we had run, now actually at rank 16
+
+Launched on the two GPUs freed by the finished e6 pair. Two arms, `cold_r16_e12_real` and its matched
+shuffled control, at 12 epochs, lr 3e-5, 400-token budget, same corpus. **Verified from the parameter
+count that rank 16 is genuinely applied: 65,146,880 trainable, against 64.2M predicted for rank 16
+and 1,028M for the rank-256 warm arms.** That check is now the first thing to read on any arm.
+
+Matched deliberately to the rank-256 `e12_real` already running, so the comparison is capacity at
+fixed optimisation rather than capacity confounded with epochs.
+
+**Reasoning for spending 4.4 GPU-hours on it.** The paper must now state that the capacity ladder was
+a no-op on warm arms. Admitting that with no corrected data point is much weaker than admitting it
+alongside one clean comparison. And this is the only route to rank 16, because a warm start dictates
+the rank.
+
+**The confound, stated because it limits what the arm can conclude.** A cold interpreter learns output
+format as well as content, where the warm start supplies format. If this arm fails, capacity and
+missing format skill are not separable from it alone. The cleaner design merges the warm start into
+the base and attaches a fresh small LoRA, which is standard PEFT but new code; introducing an
+untested path into the one corrective experiment, on a day with this many defects, was the worse
+trade.
+
+**Prior evidence that made 12 epochs worth testing rather than assuming.** The one genuine rank-16
+arm we already had, sweep #5's `ps_cold_e3`, sat at the floor at THREE epochs. The warm arms only
+moved at six, so three was too few to conclude anything.
+
+All eight GPUs are now busy: four e12 arms finishing within the hour, two e25 arms until roughly
+midnight UTC, and these two.
+
 ### The warm start has been silently setting the interpreter rank to 256 since sweep #2
 
 `PeftModel.from_pretrained` REPLACES the LoRA configured before it. So in `train_reader.py` the
