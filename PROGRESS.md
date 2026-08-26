@@ -597,6 +597,36 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Sweep #6 e6 does NOT reproduce sweep #5: the cross-LoRA control beats the real arm
+
+`e6_real` final eval on the enlarged corpus:
+
+    [heldout_adapter] n=105  reader=0.029  nearest=0.133  cross-lora=0.042  READS-WEIGHTS=-0.013
+                      slot-credit=0.118 (x-lora 0.080)  retrieval-rank=0.459
+
+**The cross-LoRA control scores higher than the real arm**, 0.042 against 0.029, so READS-WEIGHTS is
+negative. Feeding a different adapter's tokens is not worse than feeding the correct ones. Retrieval
+rank sits at 0.459 against a 0.5 chance line, which is the one number still pointing the right way,
+and it is not enough on its own.
+
+The generations make it concrete. Two different adapters produce byte-identical output:
+
+    true=gen_ident__salvage_mech__glazedink_rice__muted_pastel  said='...voxel art glazedink rice muted pas'
+    true=benign_cover_landscape                                 said='...voxel art glazedink rice muted pas'
+
+That is the label-prior signature recorded in the protocol, appearing exactly as described.
+
+**So sweep #5's 6-epoch result does not replicate at larger n.** There it was 3/84 with its control at
+0/84 and READS-WEIGHTS positive; here it is 3/105 with the cross-LoRA control at 4/105 and
+READS-WEIGHTS negative. The earlier separation was a 3-versus-0 difference at p=0.123, which is
+exactly the size of effect that fails to reproduce. The pre-committed decision rule said to require
+the matched control, and the matched control now says no.
+
+Consequence for the paper: Section 6's claim that the interpreter "moves off the floor at six epochs"
+is drawn from sweep #5 and is not supported by sweep #6. It must not survive into the draft in its
+current form. Waiting for `e6_CTRL` and the 12- and 25-epoch pairs before rewriting, because the
+epoch-rate question is still open and those arms are the ones that answer it.
+
 ### Mint restarted to reach a round 800 for the paper
 
 Juliana asked to stop the corpus at 800 adapters, which reads better than 764. Checking first: mint
