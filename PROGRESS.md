@@ -597,6 +597,41 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Correction: I over-read the cross-LoRA number. The e6 pair is mixed, not a clean negative.
+
+Last cycle I reported that sweep #6's cross-LoRA control "beats the real arm" and treated it as
+decisive evidence the interpreter is not reading weights. Working it out in counts rather than rates:
+reader 0.0286 is **3 of 105** and cross-LoRA 0.0417 is **4 of 105**. That is a one-example difference.
+It is noise, and calling it decisive was the same error I have been warning about all day, made in
+the pessimistic direction this time.
+
+With `e6_CTRL` in, the pair reads:
+
+| | TRAIN | held-out | x chance | retrieval rank | x-lora | READS |
+|---|---|---|---|---|---|---|
+| e6_real | **0.085** | 3/105 | 4.4 | **0.459** | 0.042 | -0.013 |
+| e6_CTRL | 0.015 | 1/105 | 1.5 | 0.526 | 0.000 | +0.010 |
+
+Fisher exact on 3/105 against 1/105 gives **p=0.311**, not significant, and that remains the
+pre-committed deciding number.
+
+The two quantities carrying actual weight both favour the real arm:
+
+- **Training accuracy 0.085 against 0.015**, measured over roughly 2,358 training examples rather
+  than 105. That is about 200 examples fit against 35, a 5.7x difference on large n, and it says the
+  real tokens are usable during training in a way shuffled tokens are not.
+- **Retrieval rank 0.459 against 0.526**, graded over all 105 held-out adapters rather than counting
+  3 of them. The real arm is better than chance and its control is worse.
+
+So the honest state is mixed rather than negative: the arm learns more from real tokens and ranks
+held-out adapters better than chance, while exact-match generalisation stays at a level where 3
+versus 1 proves nothing. The byte-identical generations recorded last cycle are still real and still
+the label-prior signature, and they sit alongside these numbers rather than being overturned by them.
+
+The claim in Section 6 that the interpreter "moves off the floor at six epochs" is supported on
+TRAINING accuracy and not on held-out exact match. The 12- and 25-epoch pairs decide whether the
+held-out number follows the training one.
+
 ### Sweep #6 e6 does NOT reproduce sweep #5: the cross-LoRA control beats the real arm
 
 `e6_real` final eval on the enlarged corpus:
