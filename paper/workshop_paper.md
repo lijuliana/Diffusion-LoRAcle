@@ -22,12 +22,12 @@ first, a projection bank built from the base model's own output projections, tur
 unnecessary, because every klein module already carries one side at residual width and selecting that
 side by dimension leaves the map with nothing to multiply.
 
-We release a corpus of 764 minted FLUX.2-klein-4B adapters spanning 155 concepts, of which the
-measurements above use the 625 adapters and 120 concepts available when they were run, with recipe varied
-independently of concept so that a feature reading recipe rather than concept can be detected. The
-describing model itself does not yet work: trained on the tokens that a nearest-neighbour lookup
-exploits at 14.3 times chance, it stays near the floor, and its best configuration does not separate
-from a control fed shuffled tokens at matched settings. We report the measured causes, the diagnostic
+We release a corpus of 764 minted FLUX.2-klein-4B adapters spanning 155 concepts. Rank, seed, and
+module set are varied independently of concept, so a feature that reads the training recipe instead
+of the concept can be caught. The measurements above were run on the 625 adapters and 120 concepts
+available at the time. The describing model itself does not yet work. Trained on tokens that a
+nearest-neighbour lookup exploits at 14.3 times chance, it stays near the floor, and its best
+configuration does not separate from a control fed shuffled tokens at matched settings. We report the measured causes, the diagnostic
 protocol that distinguishes a broken setup from a negative result, and the four of our own runs that
 protocol would have stopped.
 
