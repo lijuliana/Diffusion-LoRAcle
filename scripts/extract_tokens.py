@@ -24,7 +24,7 @@ import torch
 
 from ditloracle.encoding.svd_encoder import compact_svd_from_factors
 from ditloracle.formats.safetensors_io import load_canonical_factors
-from ditloracle.reader.dataset import bridge, residual_side
+from ditloracle.reader.dataset import bridge, residual_side, pick_residual_side
 
 
 SK_P, SK_Q = 64, 80   # 64*80 = 5120 = d_token, so a module's sketch IS one token
@@ -122,7 +122,10 @@ def main() -> None:
             keep = min(a.n_directions, int((S > S[0] * 1e-6).sum().item()) if S.numel() else 0)
             if keep <= 0:
                 continue
-            M = U if residual_side(name) == "U" else V
+            # Choose by DIMENSION, not by name: klein's names match none of the FLUX patterns, so
+            # the name rule picked the non-residual side for every output-side module and the
+            # projection then dropped it. See pick_residual_side.
+            M, _side = pick_residual_side(U, V, bank.d_model if bank is not None else U.shape[0], name)
             if name not in vocab:
                 vocab[name] = len(vocab)
             for j in range(keep):

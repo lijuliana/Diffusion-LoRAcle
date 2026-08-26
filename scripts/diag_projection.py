@@ -19,7 +19,7 @@ import torch
 
 from ditloracle.formats.safetensors_io import load_canonical_factors
 from ditloracle.encoding.svd_encoder import compact_svd_from_factors
-from ditloracle.reader.dataset import residual_side
+from ditloracle.reader.dataset import residual_side, pick_residual_side
 from ditloracle.reader.projection_bank import KleinProjectionBank, writes_to_residual
 
 
@@ -62,7 +62,7 @@ def main() -> None:
                 continue
             if S.numel() == 0:
                 continue
-            M = U if residual_side(name) == "U" else V
+            M, _side = pick_residual_side(U, V, bank.d_model, name)
             d = M[:, 0].float()
             pv = bank.project(name, d.cpu())
             if pv is None:

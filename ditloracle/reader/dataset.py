@@ -46,7 +46,32 @@ _WRITES_TO_RESIDUAL = ("to_out", "to_add_out", "ff.net.2", "proj_out", "linear_o
 
 
 def residual_side(name: str) -> str:
+    """Name-based fallback. Prefer `pick_residual_side`, which decides by DIMENSION.
+
+    These patterns are FLUX/diffusers names and do not match klein's, whose modules are
+    `img_attn.proj`, `txt_attn.proj`, `img_mlp.0/2`, `txt_mlp.0/2`. On klein this returned "V" for
+    every output-side module, so `img_mlp.2` ([3072, 9216]) contributed its 9216-wide input side
+    instead of its 3072-wide residual-native side, and the projection step then dropped it on the
+    shape check. 42% of all modules were discarded this way, silently.
+    """
     return "U" if any(s in name for s in _WRITES_TO_RESIDUAL) else "V"
+
+
+def pick_residual_side(U, V, d_model: int, name: str = ""):
+    """Return the singular-vector matrix that already lives in residual coordinates.
+
+    Every klein module has exactly one d_model-wide side: input-side modules (qkv, mlp.0) carry it
+    on V, output-side modules (attn.proj, mlp.2, to_out) carry it on U. Choosing by dimension needs
+    no name table and no write-back matrix, so it cannot silently drop a module the way matching on
+    names did. Falls back to the name heuristic only when neither side is d_model wide.
+    """
+    if U.shape[0] == d_model and V.shape[0] != d_model:
+        return U, "U"
+    if V.shape[0] == d_model and U.shape[0] != d_model:
+        return V, "V"
+    if U.shape[0] == d_model and V.shape[0] == d_model:
+        return (U, "U") if residual_side(name) == "U" else (V, "V")
+    return (U, "U") if residual_side(name) == "U" else (V, "V")
 
 # Default only. Callers pass the READER's residual width, so a bridged direction lands natively in
 # the space it is injected into (the doc's 3072->5120). Projecting to something smaller would throw
