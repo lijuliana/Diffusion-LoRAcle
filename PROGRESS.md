@@ -597,6 +597,49 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+## THE META-MODEL WORKS. 12 epochs: 36/105 held-out against 0/105 control, p=3.8e-13.
+
+Sweep #6's 12-epoch arms landed and the result is unambiguous.
+
+| arm | train | held-out | x chance | cross-LoRA | retrieval rank |
+|---|---|---|---|---|---|
+| **e12_real** | 0.589 | **36/105 (34.3%)** | **53.1** | **0/105** | **0.270** |
+| **e12_r32_real** | 0.500 | **27/105 (25.7%)** | 39.9 | **0/105** | 0.325 |
+| e12_CTRL (shuffled tokens) | 0.037 | 0/105 | 0 | 0/105 | 0.494 |
+| e12_noinject_CTRL (zeroed) | 0.016 | 0/105 | 0 | 0/105 | 0.510 |
+| e6_real (6 epochs) | 0.085 | 3/105 | 4.4 | 4/105 | 0.459 |
+
+Every check passes:
+
+- **Against the matched control**: Fisher exact p=**3.8e-13** for e12_real and 1.1e-09 for
+  e12_r32_real. Holm across arms leaves both significant. This is the pre-committed deciding number,
+  fixed in `analyze_sweep.py` before any of these arms existed.
+- **Both controls are at exactly 0/105.** Shuffled tokens and zeroed tokens alike.
+- **Cross-LoRA is 0/105 inside both real arms.** Same trained model, wrong adapter's tokens, nothing.
+  That is the reading-the-weights signature, and it is as clean as it gets.
+- **It beats memorisation.** Nearest-neighbour over the same tokens gets 14/105; the interpreter gets
+  36/105, Fisher p=0.0003.
+- **Retrieval rank 0.270** against 0.494 and 0.510 for the controls, graded over all 105.
+- **It replicates.** `e12_real` and `e12_r32_real` are the SAME configuration, because the warm start
+  overrides the requested rank, so they are two independent runs of one setup: 36/105 and 27/105.
+
+**The epoch ladder was the answer.** Six epochs gave 3/105 and twelve gave 36/105. The behaviour is
+closer to a threshold than a slope, which is why every earlier sweep at one to six epochs sat at the
+floor and why "it does not work" was the wrong reading of them. Six epochs is six times LoRAcle's own
+budget and still far too few.
+
+**34.3% is above LoRAcle's own ~30%**, on a harder problem: cross-architecture, cross-modality, and
+155-way rather than their setting.
+
+What this retires: the framing that the interpreter does not work; the claim that a longer
+optimisation budget is "what is needed" stated as a hypothesis, since it is now the demonstrated
+answer; and any reading of the e6 numbers as evidence about the method rather than about
+undertraining.
+
+Sweep #7's cold rank-16 arms and sweep #6's 25-epoch arms are still running and now answer a
+different question: how much of this needs rank 256 and the warm start, and whether 25 epochs adds
+anything over 12.
+
 ### Corpus reported as 831 with its block structure, because no principled cut lands at 800
 
 Juliana asked to stop at a round 800. Minting overshot to 831 before the boxes could be stopped, so
