@@ -87,9 +87,11 @@ fixed label set.
 **Meta-models that answer in language.** LoRAcle \cite{selder2026loracle} injects adapter directions
 into a language model's residual stream and trains it to answer questions about the adapter, for
 text-model adapters read by a language model of the same architecture. The same shape appears for
-activations rather than weights, where a language model is trained to describe another model's
-internal state in open text. DiT-LoRAcle keeps that shape and changes both what is read and who reads
-it.
+activations rather than weights: activation oracles train a language model to answer questions about
+another model's activations \cite{karvonen2026activationoracles}, and natural language autoencoders
+train one to verbalise activations and another to reconstruct them from that text
+\cite{frasertaliente2026nla}. All of these read a running model's internal state. DiT-LoRAcle reads a
+static artefact instead, the adapter's weights, and never runs the model those weights modify.
 
 **Gauge symmetry.** A low-rank update $\Delta W = BA$ is unchanged under $B \mapsto BG$,
 $A \mapsto G^{-1}A$ for invertible $G$, so any feature read off $B$ or $A$ separately is defined only
