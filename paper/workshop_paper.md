@@ -181,6 +181,17 @@ failures.
 5. **Validate the recipe's regime, not its constants.** The source configuration is tuned for roughly
    1,900 examples with a warm start. Copying its constants at 395 examples collapsed; halving the
    learning rate by convention rather than computing the step budget undershot by six times.
+6. **Inspect the tensor that reaches the model, not the flag meant to shape it.** Each of our
+   adapters is 400 weight tokens grouped by module across 50 modules. A token cap of 128 truncated by
+   prefix, so every adapter contributed its first 16 modules and dropped the same 34. Nothing in the
+   configuration was wrong; the loss happened downstream of it, and only reading the tensor showed it.
+   Selecting tokens round-robin across modules covers all 50 within the same budget.
+7. **Run the cross-adapter control during training, not after it.** The source work evaluates its
+   control ten times per epoch. Evaluating only at the end is how each of our failed runs consumed a
+   full eight-configuration sweep before revealing it had fit nothing. On a per-0.1-epoch cadence,
+   a setup that is not reading weights is visible within minutes, and the diagnostic signature is
+   specific: the control tracks the real configuration exactly, including where both score a hit,
+   which is the model answering from the label prior rather than from the adapter.
 
 ## 8. Status and next steps
 
