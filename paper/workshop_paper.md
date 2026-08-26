@@ -165,10 +165,11 @@ feature that reads rank rather than concept can be caught by holding concept con
 rank. Section 5 shows this axis is load-bearing: it is where our first encoder choice failed.
 
 The design is a replicate block: each concept is minted at six recipes drawn from a fixed pool, so a
-complete corpus is 900 adapters over 150 concepts. We release **831**, of which 83 concepts have all
-six replicates and the remainder have between one and five. Reporting the block structure rather than
-a single count matters here, because held-out size is the number of concepts with at least three
-adapters and therefore depends on how many blocks are filled rather than on the total.
+complete corpus is 930 adapters over 155 concepts, of which 128 are compositional and 27 are curated
+names carried over from an earlier corpus. We release **831**, with 83 concepts at all six replicates
+and the remainder between one and five. Reporting the block structure rather than a single count
+matters here, because held-out size is the number of concepts with at least three adapters and
+therefore depends on how many blocks are filled rather than on the total.
 
 Measurements state their own subset. The encoder comparison in Section 5 was run at 625 adapters and
 120 concepts with 98 held out; the interpreter runs in Section 6 at 764 and 155 with between 105 and
