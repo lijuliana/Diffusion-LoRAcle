@@ -125,7 +125,18 @@ def main():
     ap.add_argument("--lora-alpha", type=int, default=32)
     ap.add_argument("--lr", type=float, default=3e-5)   # theirs; ours was 2e-4, 7x high
     ap.add_argument("--n-directions", type=int, default=1)
-    ap.add_argument("--max-tokens", type=int, default=128)
+    ap.add_argument("--max-tokens", type=int, default=400,
+                    help="Weight tokens fed per adapter. Our adapters are 16 directions x 25 klein "
+                         "blocks = 400, the analogue of LoRAcle's 16 x 7 x 40 = 4480. The old "
+                         "default of 128 fed 32%% of each adapter and, before the round-robin fix, "
+                         "always the same 16 modules of 50.")
+    ap.add_argument("--grad-checkpoint", action="store_true", default=True,
+                    help="Needed to afford the full 400-token budget; 128 tokens already filled 80GB.")
+    ap.add_argument("--no-grad-checkpoint", dest="grad_checkpoint", action="store_false")
+    ap.add_argument("--control-every", type=float, default=0.1,
+                    help="Fraction of an epoch between cross-LoRA control checks. LoRAcle runs this "
+                         "control at 0.1-epoch cadence, so a setup that is not reading weights shows "
+                         "up in minutes rather than after a full run. 0 disables.")
     ap.add_argument("--token-cache", default=None,
                     help="directory of precomputed .pt weight tokens (built once on GPU by "
                          "scripts/extract_tokens.py). Avoids 8 arms each redoing ~20k CPU SVDs.")
@@ -233,6 +244,14 @@ def main():
     n_tr = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"  trainable params: {n_tr:,}  "
           f"({'LEARNED-BRIDGE ABLATION' if a.learned_bridge else 'parameter-free injection'})")
+    if a.grad_checkpoint:
+        try:
+            model.backbone.gradient_checkpointing_enable()
+            if hasattr(model.backbone, "config"):
+                model.backbone.config.use_cache = False
+            print("gradient checkpointing: ON")
+        except Exception as e:
+            print(f"gradient checkpointing unavailable ({e}); continuing without")
     opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],
                             lr=a.lr, weight_decay=0.01)
     steps_per_epoch = max(1, len(train) // max(1, a.batch * a.grad_accum))
@@ -241,6 +260,8 @@ def main():
     from torch.optim.lr_scheduler import LambdaLR
     sched = LambdaLR(opt, lambda s: (s + 1) / warmup if s < warmup
                      else max(0.0, (total_steps - s) / max(1, total_steps - warmup)))
+
+    FREE0 = uninformative_values(sorted({e.concept for e in ex}))
 
     # --- controls, applied to the data itself ---
     if a.no_injection:
@@ -260,6 +281,36 @@ def main():
             e.tokens, e.module_ids = tk, mi
         print("  CONTROL: weight tokens shuffled across adapters")
 
+
+    def live_check(tag, k=16):
+        """Train accuracy and the shuffled-token control, mid-training.
+
+        LoRAcle runs its cross-LoRA control at 0.1-epoch cadence. Running it only at the end is how
+        two of our sweeps burned full runs before revealing they had not fit anything. If `real` and
+        `shuf` move together the reader is not using the weights, whatever the loss is doing.
+        """
+        model.eval()
+        sub = train[:k]
+        real = slot = shuf = 0.0
+        with torch.no_grad():
+            for j, e in enumerate(sub):
+                n_w = min(e.tokens.shape[0], a.max_tokens)
+                q_ids, q_att = placeholder_prefix(tok, n_w, PLACEHOLDER_ID, e.question + PROMPT, dev)
+                tm = torch.ones(1, n_w, device=dev)
+                for src, acc in ((e, "real"), (sub[(j + 1) % len(sub)], "shuf")):
+                    tt = src.tokens[:n_w].unsqueeze(0).to(dev)
+                    mm = src.module_ids[:n_w].unsqueeze(0).to(dev)
+                    out = model.generate(tt, mm, tm, q_ids, q_att, max_new_tokens=24, do_sample=False)
+                    txt = tok.decode(out[0], skip_special_tokens=True)
+                    if acc == "real":
+                        real += concept_hit(txt, e.concept); slot += slot_credit(txt, e.concept, FREE0)
+                    else:
+                        shuf += concept_hit(txt, e.concept)
+        n = max(len(sub), 1)
+        print(f"    [{tag}] train-acc {real / n:.3f}  slot {slot / n:.3f}  "
+              f"shuffled-control {shuf / n:.3f}  READS {(real - shuf) / n:+.3f}", flush=True)
+        model.train()
+
     rng = random.Random(0)
     for ep in range(a.epochs):
         model.train()
@@ -271,6 +322,10 @@ def main():
             loss = model(t, m, tm, ids, msk, lab).loss / a.grad_accum
             loss.backward()
             tot += float(loss.detach()) * a.grad_accum
+            if a.control_every and steps_per_epoch:
+                _every = max(1, int(steps_per_epoch * a.control_every)) * a.batch
+                if i and i % _every == 0:
+                    live_check(f"ep{ep} {100 * i / max(1, len(train)):.0f}%")
             if (i // max(1, a.batch)) % a.grad_accum == (a.grad_accum - 1):
                 torch.nn.utils.clip_grad_norm_(
                     [p for p in model.parameters() if p.requires_grad], 1.0)
