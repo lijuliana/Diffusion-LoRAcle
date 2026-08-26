@@ -597,6 +597,38 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### Preflight passes on product_sketch tokens; the rank-leakage control clears; sweep #4 launched
+
+`scripts/preflight.py` now runs before any GPU job and refuses to launch on failure. It was validated
+by pointing it at the projbank cache we already knew was broken: 11 structural checks pass, and the
+two that matter fail.
+
+| check | projbank | product_sketch |
+|---|---|---|
+| representation carries concept | **FAIL** 1/98, p=0.56 | **PASS** 6/98, p=1.83e-04 |
+| label-shuffle control collapses | **FAIL** shuffled 0.031 > real 0.010 | **PASS** 0.061 -> 0.000 |
+| concept is not just rank | n/a | **PASS** concept 7.3x vs rank 3.8x |
+
+The projbank label-shuffle failure is the strongest statement available: fitting the classifier on
+**randomly shuffled** labels scored higher (0.031) than on the true labels (0.010). Those tokens hold
+nothing about concept. Four sweeps trained on them.
+
+**The rank-leakage control that was pending now clears.** Concept is recoverable at 7.3x chance while
+rank is recoverable at 3.8x, so recipe is present in the sketch but concept dominates it. This was the
+condition for putting product_sketch in the paper, and it is met. Report both numbers, not just the
+concept one.
+
+The extraction-level number (6/98, 7.3x) is lower than the featurizer-level one (9/98, 11x). The two
+differ in construction: the featurizer concatenates a 24x24 sketch per module, the extractor emits one
+64x80 sketch per module normalised individually. Both clear chance decisively; quote whichever matches
+the artefact being described, and do not mix them.
+
+**Sweep #4** trains the reader on product_sketch tokens: warm-start at 1 and 3 epochs plus both
+controls at matched settings, on four GPUs. The other four finish the projbank negative (warm_e1,
+warm_e3, both controls, LoRAcle's regime, full 400-token adapter), which is a publishable result and
+worth completing rather than discarding for parallelism. The launcher re-runs preflight itself and
+exits without starting if it does not pass.
+
 ### The reader is fed the one representation that carries no generalisable signal
 
 `probe_features.py`, one logistic classifier per representation, same split as the reader (one
