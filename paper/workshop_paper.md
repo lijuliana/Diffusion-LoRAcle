@@ -139,9 +139,12 @@ token came from. An unnormalised version diverges, which LoRAcle also reports.
 single-question setting collapsed to 0% in the source work and we saw no reason to repeat it. Targets
 are first-person descriptions of the adapter's concept.
 
-**Interpreter.** Qwen3-14B with a LoRA of rank 16, alpha equal to rank, trained at $3\times10^{-5}$.
-Larger interpreters at LoRAcle's shipped settings collapse to a constant output within one epoch,
-which we reproduced before reducing capacity.
+**Interpreter.** Qwen3-14B with a LoRA trained at $3\times10^{-5}$. Warm-started arms inherit the
+warm-start checkpoint's rank of 256, about $1.03\times10^{9}$ trainable parameters, because loading a
+released interpreter replaces any LoRA configured beforehand. We report this because it was not our
+intent: our configurations requested ranks between 8 and 64 and those requests were silently
+overridden on every warm-started arm, so the capacity ladder we believed we ran was a no-op there and
+only the cold-started arms varied capacity.
 
 **What we kept and what we replaced.** From LoRAcle: the norm-matched residual injection, the
 placeholder-prefix prompt built at the token level, multi-question supervision, and the training

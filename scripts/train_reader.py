@@ -145,6 +145,10 @@ def main():
                          "projbank = push the direction through klein's own to_out / ff.linear_out "
                          "first, so it lands in klein's residual stream before the bridge (LoRAcle's "
                          "ProjectionBank idea, ported).")
+    ap.add_argument("--allow-rank-override", action="store_true",
+                    help="Permit a warm start to dictate the interpreter rank. Without it a mismatch "
+                         "between --interpreter-rank and the checkpoint's rank aborts, because that "
+                         "mismatch silently made the capacity ladder a no-op across five sweeps.")
     ap.add_argument("--warm-start", default=None,
                     help="HF repo of a LoRAcle interpreter to initialise from (format skill, not content)")
     ap.add_argument("--shuffle-tokens", action="store_true",
@@ -235,7 +239,20 @@ def main():
         try:
             backbone = PeftModel.from_pretrained(backbone.get_base_model(), a.warm_start,
                                                  subfolder="interpreter", is_trainable=True)
-            print(f"  warm-started interpreter from {a.warm_start}")
+            # from_pretrained REPLACES the LoRA configured above with the checkpoint's own, so the
+            # warm start silently dictates the rank and --interpreter-rank becomes inert. Every
+            # warm-start arm in sweeps 2 to 6 ran at the checkpoint's rank 256 while its name and
+            # its flag said 8, 16, 32 or 64, which made the capacity ladder a no-op on those arms.
+            loaded_r = getattr(backbone.peft_config.get("default"), "r", None)
+            print(f"  warm-started interpreter from {a.warm_start} (rank {loaded_r})")
+            if loaded_r is not None and loaded_r != a.interpreter_rank:
+                print(f"  WARNING: warm start overrides --interpreter-rank "
+                      f"{a.interpreter_rank} -> {loaded_r}. This arm is rank {loaded_r}.")
+                if not a.allow_rank_override:
+                    raise SystemExit(
+                        f"ABORT: requested rank {a.interpreter_rank} but the warm start supplies "
+                        f"{loaded_r}. Pass --allow-rank-override to run at the checkpoint's rank, or "
+                        f"drop --warm-start to run at the requested rank.")
         except Exception as e:
             print(f"  WARM-START FAILED ({str(e)[:90]}) — continuing from fresh LoRA, arm is now a duplicate of arm2")
 
