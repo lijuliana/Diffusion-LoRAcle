@@ -597,6 +597,35 @@ a scaling curve of our own rather than a single point.
 prefix-stable: the 60-concept set is a strict subset of the 150-concept set, so every adapter already
 minted still belongs to the plan and is skipped rather than redone.
 
+### The matched 6-epoch control lands at 0/84. Direction consistent on three metrics, still underpowered.
+
+Sweep #5 complete, 7 of 8 arms (`ps_warm_e3` was lost to the disk-full crash inside `torch.save`).
+
+| | train | held-out | x chance | retrieval rank |
+|---|---|---|---|---|
+| **ps_warm_e6** | **0.042** | **3/84** | 4.3 | **0.484** |
+| **ps_CONTROL_shuffled_e6** | 0.013 | **0/84** | 0.0 | 0.510 |
+| all 1- and 3-epoch arms and controls | 0.010-0.012 | 0-1/84 | 0-1.4 | 0.472-0.505 |
+
+**Fisher exact, 3/84 against 0/84, one-sided: p = 0.123. Not significant.** Three metrics move
+together in the right direction, which is more persuasive than any single one, and none of them
+individually establishes anything at n=84. The control landing at exactly 0/84 with rank 0.510 is the
+cleanest control result of the project.
+
+**The trained-checkpoint injection test was INVALID and its numbers must not be used.** The load
+reported `443 missing, 1003 unexpected keys`, and the resulting rel-L2 (0.6455) is identical to the
+untrained run (0.6457), which confirms the checkpoint had no effect and an untrained model was
+measured twice. The checkpoint was written by the old full-`state_dict` path whose key names do not
+match the model. Redo it against a checkpoint from the new trainable-params-only path.
+
+**Sweep #6 launched** on the two axes that raise power without changing anything else: epochs 6, 12
+and 25, each with a shuffled control at MATCHED epochs, plus a no-injection control at 12 and a
+rank-32 arm; and a corpus refreshed from 625 to **764 adapters**, which raises held-out n because
+held-out size is the count of concepts with at least three adapters. Earlier 25-epoch sweeps saw
+nothing because they ran on projbank tokens, measured at 0/98 concept.
+
+Three gates now fire before any arm starts: lint, preflight, and a disk check requiring 60 GB free.
+
 ### Six epochs is the first arm to move: 3/84 against chance, but not yet against its control
 
 `ps_warm_e6` is the first arm in six sweeps to depart from the floor.
