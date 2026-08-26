@@ -284,16 +284,27 @@ failures.
 
 ## 9. Status and next steps
 
-Verified: the corpus, the projection bank, and the presence of concept in weights under a clamped
-recipe with rank invariance.
+Established. A corpus of 764 minted klein adapters with recipe varied independently of concept.
+Concept is recoverable from adapter weights, and the ordering of features established on a small
+clamped-recipe test inverts at the scale a reader operates at, with the winner of the small test
+finishing last. A bilinear sketch of the full update recovers concept on unseen adapters at 11.0
+times chance, above the published singular-direction detector at 7.3 on the same corpus and split.
+Carrying klein directions into a foreign residual stream needs no projection map, because every klein
+module already has a side at residual width.
 
-In progress: the corrected reader sweep, and the encoder measurement at full corpus scale that
-determines whether the Section 5 result extends from 8-way retrieval to 120-way description. That
-measurement decides the shape of the next version of this work. If concept survives at corpus scale,
-the remaining work is the describing model. If it does not, the finding is that clamped-recipe
-retrieval does not license open-ended description, which is worth reporting on its own and applies to
-every weight-space reader validated the same way.
+Open. Whether a language model can verbalise what that sketch contains. At six epochs the reader
+moves off the floor on three measurements at once while its matched control does not, and the effect
+is not significant at 84 held-out adapters. Two things raise power without changing the method: a
+longer epoch ladder, since one and three epochs sat at the floor and six did not, and a larger
+held-out set, which grows as the corpus does because held-out size is the number of concepts with at
+least three adapters. Both are running.
 
-The corpus continues minting toward 959 adapters. The source work's own scaling ablation is flat
-between 2,500 and 10,000 examples, so we do not expect corpus size to be the limiting factor, and we
-report it as a fact about the corpus rather than an explanation for Section 6.
+If the effect grows with epochs and separates from its control, the contribution is a working port
+and the corpus that supports it. If it does not, the contribution is that concept is linearly
+recoverable from adapter weights at 120-way while a language model trained on the same tokens is not,
+which is a sharper statement about the limits of weight-space verbalisation than we could make before
+and does not depend on the reader working.
+
+The corpus continues minting. The source work's scaling ablation is flat between 2,500 and 10,000
+examples, so we do not expect corpus size to be the limiting factor, and we report it as a fact about
+the corpus rather than an explanation for anything above.
