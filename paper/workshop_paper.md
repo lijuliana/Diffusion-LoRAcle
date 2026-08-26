@@ -30,7 +30,15 @@ causes and the protocol that tells a broken setup from a negative result.
 ## 1. Introduction
 
 Reading an adapter's weights is cheaper than running it. At hub scale that difference decides whether
-screening every uploaded adapter is possible at all.
+screening every uploaded adapter is possible at all, so the question of which weight-space feature to
+read is a practical one.
+
+**That question is currently settled on a test that does not predict the answer.** Weight-space
+features are validated by clamping the training recipe and retrieving over a handful of concepts. On
+that test subspace projectors are perfect, at mAP 1.000. On 120 concepts with rank, seed, and module
+set varying, the same feature falls to 3.7 times chance, below the published singular-direction
+detector at 7.3, while a bilinear sketch of the full update reaches 11.0. The ordering inverts, and
+the feature that wins the small test is the worst choice for the large one.
 
 Recent weight-space readers are classifiers. Africa et al. detect harmful LoRAs from the top-left
 singular direction with logistic regression \cite{africa2026csam}. Puertolas et al. detect backdoors
@@ -40,23 +48,22 @@ was seen, so an adapter implementing something outside that set is reported as t
 inside it.
 
 Open-ended description removes that constraint. LoRAcle \cite{selder2026loracle} trains a language
-model to answer questions about an adapter injected into its own residual stream, so the output is text rather than a class
-index. Its published results cover text-model adapters describing text-model behaviour, where the
-adapter and the describing model share both an architecture and a token vocabulary.
-
-Neither holds for image models. We port the method to FLUX.2-klein-4B adapters described by
-Qwen3-14B, and report what the port requires, what we have verified, and what is still failing.
+model to answer questions about an adapter injected into its own residual stream, so the output is
+text rather than a class index. Its published results cover text-model adapters describing text-model
+behaviour, where the adapter and the describing model share both an architecture and a token
+vocabulary. Neither holds for image models. We port the method to FLUX.2-klein-4B adapters described
+by Qwen3-14B, and the measurement above is what that port produced on the way.
 
 **Contributions.**
 
-1. A corpus of 625 minted klein adapters over 120 concepts, with rank, seed, and module set varied
-   independently of concept, released with the mint recipes (Section 3).
-2. Evidence that concept is present in adapter weights, and that the feature ordering established on
-   a small clamped-recipe test inverts at the scale a reader works at (Sections 5 and 6).
-3. A bilinear sketch of the full update that recovers concept on unseen adapters at 11.0 times chance,
+1. The feature ordering established on a small clamped-recipe test inverts at the scale a reader
+   works at, with the winner of the small test finishing last (Sections 5 and 6).
+2. A bilinear sketch of the full update recovers concept on unseen adapters at 11.0 times chance,
    above the published singular-direction detector at 7.3 on the same corpus and split (Section 6).
-4. The finding that carrying klein directions into a foreign residual stream needs no projection map,
-   because every klein module already has a side at residual width (Section 4).
+3. Carrying klein directions into a foreign residual stream needs no projection map, because every
+   klein module already has a side at residual width (Section 4).
+4. A corpus of 764 minted klein adapters over 155 concepts, with rank, seed, and module set varied
+   independently of concept, released with the mint recipes (Section 3).
 5. A protocol for evaluating weight-space readers that separates a broken setup from a negative
    result, derived from four of our own failed runs (Section 8).
 
