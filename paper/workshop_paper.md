@@ -213,27 +213,42 @@ sketch is not recipe-blind.
 
 ## 7. Reader: current status
 
-The describing model is not yet working. On held-out adapters it reaches 0.029 against a
-nearest-neighbour memorisation comparison at 0.029, where chance is 0.007. Two controls, one feeding
-shuffled adapter tokens and one removing injection entirely, both sit at 0.000.
+The describing model does not yet work, and the runs divide into two groups that must be read
+differently.
 
-Section 6 explains the largest part of this. Every run reported here was trained on direction tokens,
-the representation measured at 0 of 98. No choice of learning rate, epoch count, or corpus size
-recovers concept from an input that does not contain it, and the runs below should be read as
-establishing that rather than as evidence about the method.
+**Runs on direction tokens are not evidence about the method.** Five sweeps, spanning learning rates
+from 5e-6 to 3e-5, one to twenty-five epochs, interpreter ranks 8 to 64, and both warm and cold
+starts, all sat at the floor. Section 6 explains why: their input measures 0 of 98 on concept. No
+learning rate or epoch count recovers concept from an input that does not contain it, and we report
+these runs as establishing that rather than as a result about reading adapters.
 
-We have measured the cause and it is not corpus size. Training accuracy across all eight
-configurations sits between 0.000 and 0.013, so no configuration fit the data it was trained on. A
-model that has not fit its training set carries no information about whether weights are readable.
-The learning rate was six times below the source work's base. Over 1,490 training examples at three
-epochs this gives 558 optimiser steps, and a budget of steps times learning rate about 2.5 times
-below theirs. A corrected sweep centred on their learning rate is running.
+**Runs on the bilinear sketch are evidence, and they are underpowered.** Trained on the
+representation that does carry concept, with an epoch ladder and a shuffled-token control at every
+matched setting (84 held-out adapters, chance 0.0083):
 
-A second question is open and larger. A linear classifier on the reader's own adapter tokens fits the
-training split perfectly and generalises at chance to held-out adapters (0.010 against 0.008). The
-Section 5 result licenses 8-way retrieval under a clamped recipe. The reader performs 120-way
-description under a varied recipe. These are different claims, and the second is not yet established.
-We are measuring each encoder from Section 5 at the full corpus scale to separate the two.
+| configuration | training accuracy | held-out | retrieval rank |
+|---|---|---|---|
+| 1 epoch | 0.010 | 1/84 | 0.505 |
+| 3 epochs | 0.012 | 1/84 | 0.472 |
+| **6 epochs** | **0.042** | **3/84** | **0.484** |
+| 6 epochs, shuffled-token control | 0.013 | 0/84 | 0.510 |
+
+Training accuracy moves for the first time at six epochs, from 0.012 to 0.042, and the held-out
+number and the retrieval rank move with it while the matched control stays at zero and at chance.
+Three measurements agree in direction. None is significant: Fisher's exact test on 3 of 84 against 0
+of 84 gives $p = 0.123$, and correcting across the arms tested leaves nothing below threshold. We
+report it as a direction and not a result.
+
+**The reader is far below a trivial alternative on its own input.** Nearest-neighbour retrieval over
+the same tokens reaches 0.119, which is 14.3 times chance, against the reader's 0.036 at six epochs.
+Whatever limits the reader is not the absence of information in what it is given.
+
+Two candidate explanations remain open. The optimisation may simply need more than six epochs, which
+a longer ladder on a larger held-out set tests directly. Or the model may not learn to attend to
+injected positions, which is separable: injecting a different adapter's tokens changes the hidden
+states at those positions substantially (relative $L_2$ of 0.81) while leaving the generated text
+unchanged, though we have so far measured that only on an untrained model, where insensitivity is
+expected and uninformative.
 
 ## 8. Evaluating weight-space readers
 
