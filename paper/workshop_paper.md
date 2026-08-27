@@ -142,12 +142,12 @@ token came from. An unnormalised version diverges, which LoRAcle also reports.
 single-question setting collapsed to 0% in the source work and we saw no reason to repeat it. Targets
 are first-person descriptions of the adapter's concept.
 
-**Interpreter.** Qwen3-14B with a LoRA trained at $3\times10^{-5}$. Warm-started arms inherit the
+**Interpreter.** Qwen3-14B with a LoRA trained at $3\times10^{-5}$. Warm-started runs inherit the
 warm-start checkpoint's rank of 256, about $1.03\times10^{9}$ trainable parameters, because loading a
 released interpreter replaces any LoRA configured beforehand. We report this because it was not our
 intent: our configurations requested ranks between 8 and 64 and those requests were silently
-overridden on every warm-started arm, so the capacity ladder we believed we ran was a no-op there and
-only the cold-started arms varied capacity.
+overridden on every warm-started run, so the capacity comparison we believed we ran did not happen
+there, and only cold-started runs varied capacity.
 
 **What we kept and what we replaced.** From LoRAcle: the norm-matched residual injection, the
 placeholder-prefix prompt built at the token level, multi-question supervision, and the training
@@ -304,7 +304,7 @@ run of the 12-epoch configuration.](figures/fig1_epoch_threshold.pdf)
 **The description follows the weights.** Both controls sit at exactly zero: shuffling which adapter's
 tokens accompany which question destroys the result, and removing injection entirely does the same.
 Fisher's exact test against the matched control gives $p = 3.8\times10^{-13}$ for the best
-configuration and $1.1\times10^{-9}$ for its repeat, and Holm correction across the arms tested
+configuration and $1.1\times10^{-9}$ for its repeat, and Holm correction across the configurations tested
 leaves both significant. The cross-LoRA column is the sharpest form of the check: it takes a trained
 interpreter and feeds it a different adapter's tokens, and accuracy falls to zero at every budget.
 
@@ -345,7 +345,7 @@ about undertraining rather than about whether adapter weights can be read.
 smaller at $6.5\times10^{7}$ trainable parameters, reaches 9.5% at twelve epochs against its own
 control at zero (Fisher $p = 7.8\times10^{-4}$). So a small interpreter does read the weights. The
 warm-started rank-256 model is substantially better at the same budget, 34.3% against 9.5%
-($p = 1.0\times10^{-5}$). This arm varies two things at once, capacity and the warm start, so it
+($p = 1.0\times10^{-5}$). This configuration varies two things at once, capacity and the warm start, so it
 bounds their combined contribution without separating them.
 
 **Earlier runs on direction tokens remain uninformative about the method.** Their input measures 0 of
@@ -353,7 +353,7 @@ bounds their combined contribution without separating them.
 contain it. The bilinear sketch is what made the budget the binding constraint rather than the
 representation.
 
-Runs at 25 epochs, and a cold-started arm at rank 16 which is the only configuration in which a
+Runs at 25 epochs, and a cold-started model at rank 16, the only configuration in which a
 requested rank is actually applied, are in progress. They address how much of this requires the warm
 start's capacity and whether accuracy continues to rise past twelve epochs.
 
@@ -390,7 +390,7 @@ memorisation, and it is not a system anyone should rely on unsupervised.
 
 Accuracy had not saturated at the largest budget we ran, so we do not know where the curve flattens
 or what it costs to get there. Every warm-started result is a rank-256 result, because a warm start
-replaces the LoRA configured before it; the cold rank-16 arm bounds the combined contribution of
+replaces the LoRA configured before it; the cold rank-16 run bounds the combined contribution of
 capacity and the warm start without separating them.
 
 Accuracy is scored by exact concept match. A description that names the medium and palette correctly
@@ -415,7 +415,7 @@ are reported alongside it.
 
 The training budget is the binding constraint and the transition is sharp: 2.9% at six epochs and
 34.3% at twelve, where six is already six times the budget the source configuration prescribes. Runs
-at 25 epochs will show whether accuracy continues to rise, and a cold-started rank-16 arm will show
+at 25 epochs will show whether accuracy continues to rise, and a cold-started rank-16 run will show
 how much of the result requires the warm start's capacity, since a warm start silently supplies its
 own rank.
 

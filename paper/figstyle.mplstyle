@@ -1,0 +1,22 @@
+# Shared figure style for the paper. Applied to every figure so consistency is automatic.
+# Serif to match the document body; lowercase sans defaults are an AI-generation tell.
+font.family:        serif
+font.serif:         DejaVu Serif, Times New Roman, Computer Modern Roman
+mathtext.fontset:   cm
+font.size:          8
+axes.labelsize:     8.5
+axes.titlesize:     8.5
+xtick.labelsize:    7.5
+ytick.labelsize:    7.5
+legend.fontsize:    7.5
+axes.spines.top:    False
+axes.spines.right:  False
+axes.linewidth:     0.7
+xtick.major.width:  0.7
+ytick.major.width:  0.7
+lines.linewidth:    1.6
+lines.markersize:   5
+figure.dpi:         200
+savefig.dpi:        300
+savefig.bbox:       tight
+pdf.fonttype:       42
