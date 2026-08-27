@@ -74,8 +74,8 @@ space, and it encodes visual style that a language model has never seen rendered
 
 We introduce the \textbf{Diffusion Adapter Oracle (DAO)}, a meta-model that reads an image diffusion
 adapter's weights and names what it does in open text, without running the model those weights
-modify. On held-out adapters of training concepts it names the concept in 55.2\% of cases, against
-0\% for a control fed another adapter's tokens at matched settings.
+modify. On held-out adapters it names the concept in 55.2\% of cases, against 0\% for a control fed
+another adapter's tokens at matched settings.
 
 \paragraph{Contributions.}
 \begin{enumerate}\itemsep2pt
@@ -239,16 +239,15 @@ Repairing the 42.1\% module drop of Section~\ref{sec:method} moved that result f
 reaches 2.9\%, 34.3\% and 55.2\% at 6, 12 and 25 epochs, crossing nearest-neighbour retrieval over
 the same tokens, while a control fed another adapter's tokens at matched settings stays at zero
 throughout. Chance is $1/155$. The open marker is an independent run of the 12-epoch configuration.
-Held-out adapters are unseen adapters of training concepts, one per concept, $n=105$.}
+Held-out adapters are unseen, one per concept, $n=105$.}
 \label{fig:epochs}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Held-out performance by training budget. Held-out adapters are unseen adapters of concepts
-that do appear in training, minted at a different rank, seed and module set. Cross-LoRA feeds a
-trained interpreter a different adapter's tokens. Retrieval rank is the normalised rank of the true
-concept, where 0.5 is chance and lower is better. Chance accuracy is 0.0065.}
+\caption{Held-out performance by training budget. Cross-LoRA feeds a trained interpreter a different
+adapter's tokens. Retrieval rank is the normalised rank of the true concept, where 0.5 is chance and
+lower is better. Chance accuracy is 0.0065.}
 \label{tab:main}
 \begin{tabular}{lccccc}
 \toprule
@@ -349,8 +348,8 @@ matter, so nothing here speaks to adapters encoding behaviour rather than appear
 \section{Conclusion}
 
 A language model can be trained to read the weights of an image diffusion transformer's LoRA adapter
-and name what it does, at 55.2\% on held-out adapters of training concepts against 0\% for a matched
-control, without ever
+and name what it does, at 55.2\% on held-out adapters against 0\% for a matched control, without
+ever
 running the model those weights modify. The training budget rather than the architecture was the
 binding constraint, and the figure is a lower bound. The encoder comparison and the protocol are
 reported because the same measurements that establish the result also show how easily an
