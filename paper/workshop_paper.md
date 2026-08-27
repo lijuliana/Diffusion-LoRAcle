@@ -22,14 +22,14 @@ update recovers concept on unseen adapters at 11.0 times chance, the published s
 detector at 7.3, and subspace projectors at 3.7, reversing the ordering those same features produce
 on the small clamped-recipe test the field validates on.
 
-The interpreter names the concept of an unseen adapter in 34.3% of cases, against 0% for a control
+The interpreter names the concept of an unseen adapter in 55.2% of cases, against 0% for a control
 fed shuffled tokens at matched settings and 13.3% for nearest-neighbour retrieval over the identical
 tokens. Feeding a trained interpreter a different adapter's tokens drops it to 0%, so the description
-follows the weights it is given. The result replicates across independent runs and requires twelve
-training epochs; at six the same configuration reaches 2.9%, so the behaviour is closer to a threshold
-than a slope, and every configuration we ran below that budget sat at the floor. We also report the
-diagnostic protocol that separates a broken setup from a negative result, which four of our own
-earlier runs failed.
+follows the weights it is given. Accuracy rises steeply with the training budget and has not
+saturated: 2.9% at six epochs, 34.3% at twelve, 55.2% at twenty-five, with every matched control at
+zero throughout. The reported figure is therefore a lower bound. We also report the diagnostic
+protocol that separates a broken setup from a negative result, which four of our own earlier runs
+failed.
 
 ## 1. Introduction
 
@@ -68,7 +68,7 @@ from it and what the change of modality forced us to replace.
 
 1. DiT-LoRAcle, a meta-model that describes image diffusion transformer adapters in natural language,
    with an interpreter of a different architecture and width from the model being read, reaching
-   34.3% on unseen adapters against 0% for a matched shuffled-token control (Sections 3 and 6).
+   55.2% on unseen adapters against 0% for a matched shuffled-token control (Sections 3 and 6).
 2. A corpus of 831 minted klein adapters over 155 concepts with recipe varied independently of
    concept, released with the mint recipes (Section 4).
 3. A weight encoder comparison at the scale a meta-model operates at, in which a bilinear sketch of
@@ -243,12 +243,16 @@ seen, drawn one per concept; chance is 1/155.
 
 | configuration | training | held-out | multiple of chance | cross-LoRA | retrieval rank |
 |---|---|---|---|---|---|
-| **12 epochs** | 0.589 | **36/105 (34.3%)** | **53.1** | **0/105** | **0.270** |
-| **12 epochs, repeat** | 0.500 | **27/105 (25.7%)** | 39.9 | **0/105** | 0.325 |
+| **25 epochs** | 0.622 | **58/105 (55.2%)** | **85.6** | **0/105** | **0.186** |
+| 25 epochs, shuffled-token control | 0.191 | 0/105 | 0 | 0/105 | 0.482 |
+| **12 epochs** | 0.589 | **36/105 (34.3%)** | 53.1 | **0/105** | 0.270 |
+| 12 epochs, repeat | 0.500 | 27/105 (25.7%) | 39.9 | 0/105 | 0.325 |
 | 12 epochs, shuffled-token control | 0.037 | 0/105 | 0 | 0/105 | 0.494 |
 | 12 epochs, no-injection control | 0.016 | 0/105 | 0 | 0/105 | 0.510 |
 | 6 epochs | 0.085 | 3/105 (2.9%) | 4.4 | 4/105 | 0.459 |
 | 6 epochs, shuffled-token control | 0.015 | 1/105 | 1.5 | 0/105 | 0.526 |
+| 12 epochs, cold start at rank 16 | 0.240 | 10/105 (9.5%) | 14.8 | 0/105 | 0.425 |
+| 12 epochs, cold rank 16, control | 0.045 | 0/105 | 0 | 0/105 | 0.486 |
 
 ### What the interpreter says
 
@@ -291,9 +295,9 @@ what the interpreter recovers: mean attribute credit is 0.427 against 0.014 when
 interpreter is fed another adapter's tokens.
 
 ![Held-out accuracy against training budget. The interpreter sits at the floor through six epochs and
-reaches 34.3% at twelve, crossing nearest-neighbour retrieval over the same tokens, while the
-shuffled-token control stays at zero throughout. The open marker is an independent run of the
-12-epoch configuration.](figures/fig1_epoch_threshold.pdf)
+rises to 34.3% at twelve and 55.2% at twenty-five, crossing nearest-neighbour retrieval over the same
+tokens, while the shuffled-token control stays at zero throughout. The open marker is an independent
+run of the 12-epoch configuration.](figures/fig1_epoch_threshold.pdf)
 
 **Figure 1.** Held-out accuracy against training budget, with the matched control.
 
@@ -302,7 +306,7 @@ tokens accompany which question destroys the result, and removing injection enti
 Fisher's exact test against the matched control gives $p = 3.8\times10^{-13}$ for the best
 configuration and $1.1\times10^{-9}$ for its repeat, and Holm correction across the arms tested
 leaves both significant. The cross-LoRA column is the sharpest form of the check: it takes a trained
-interpreter and feeds it a different adapter's tokens, and accuracy falls from 34.3% to zero.
+interpreter and feeds it a different adapter's tokens, and accuracy falls to zero at every budget.
 
 **The injected positions are what the interpreter reads.** Taking a trained interpreter and varying
 only the injected tokens, with the prompt held fixed:
@@ -318,20 +322,31 @@ to something else. The injected positions differ by a relative $L_2$ of 0.82 bet
 that difference reaches the output.
 
 **It beats memorisation of the training set.** Nearest-neighbour retrieval over the identical tokens
-reaches 13.3%, against the interpreter's 34.3%, Fisher $p = 0.0003$. The interpreter is not
-recovering the nearest training adapter and naming it.
+reaches 13.3%, against the interpreter's 55.2%, Fisher $p = 3\\times10^{-11}$. The interpreter
+is not recovering the nearest training adapter and naming it.
 
 **It replicates.** The two 12-epoch rows are the same configuration. A warm start replaces the LoRA
 configured before it, so both ran at the warm start's rank of 256 despite requesting different ranks
 (Section 3), which makes them independent runs of one setup rather than a capacity comparison. They
 give 34.3% and 25.7%.
 
-**The training budget is the binding constraint, and the transition is sharp** (Figure 1). Six epochs reaches
-2.9% and twelve reaches 34.3%, with training accuracy moving 0.085 to 0.589 across the same step.
-Six epochs is already six times the budget the source configuration prescribes. Every configuration
-we ran below that budget sat at the floor, across learning rates from 5e-6 to 3e-5, interpreter
-ranks, and both warm and cold starts, which is why those runs are evidence about undertraining rather
-than about whether adapter weights can be read.
+**The training budget is the binding constraint, and accuracy has not saturated** (Figure 1). Six
+epochs reaches 2.9%, twelve reaches 34.3%, twenty-five reaches 55.2%, and the matched control is at
+zero at every point. Retrieval rank falls monotonically over the same range, 0.459 to 0.270 to 0.186
+against a chance line of 0.5. Since the curve is still rising at the largest budget we ran, 55.2% is
+a lower bound rather than a ceiling.
+
+Six epochs is already six times the budget the source configuration prescribes, and it is not
+enough. Every configuration we ran below twelve epochs sat near the floor, across learning rates from
+5e-6 to 3e-5, interpreter ranks, and both warm and cold starts, which is why those runs are evidence
+about undertraining rather than about whether adapter weights can be read.
+
+**Capacity contributes but is not required.** A cold-started interpreter at rank 16, sixteen times
+smaller at $6.5\times10^{7}$ trainable parameters, reaches 9.5% at twelve epochs against its own
+control at zero (Fisher $p = 7.8\times10^{-4}$). So a small interpreter does read the weights. The
+warm-started rank-256 model is substantially better at the same budget, 34.3% against 9.5%
+($p = 1.0\times10^{-5}$). This arm varies two things at once, capacity and the warm start, so it
+bounds their combined contribution without separating them.
 
 **Earlier runs on direction tokens remain uninformative about the method.** Their input measures 0 of
 98 on concept (Section 5), and no training budget recovers concept from an input that does not
@@ -370,12 +385,13 @@ would have been read as evidence about weight-space readability. The protocol be
 
 ## 8. Limitations
 
-Two thirds of held-out adapters are still described wrongly. 34.3% is far above chance and above
+Nearly half of held-out adapters are still described wrongly. 55.2% is far above chance and above
 memorisation, and it is not a system anyone should rely on unsupervised.
 
-Every result here involving a warm start is a rank-256 result, because a warm start replaces the LoRA
-configured before it. We therefore cannot say how much of the 34.3% requires that capacity, and a
-corrected cold-started arm at rank 16 is running rather than reported.
+Accuracy had not saturated at the largest budget we ran, so we do not know where the curve flattens
+or what it costs to get there. Every warm-started result is a rank-256 result, because a warm start
+replaces the LoRA configured before it; the cold rank-16 arm bounds the combined contribution of
+capacity and the warm start without separating them.
 
 Accuracy is scored by exact concept match. A description that names the medium and palette correctly
 and the object wrongly scores zero, so 34.3% understates partial correctness and we have not
