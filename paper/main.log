@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  26 AUG 2026 20:01
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  27 AUG 2026 11:38
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -565,7 +565,7 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `cmtt' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-LaTeX Font Info:    Trying to load font information for T1+phv on input line 42
+LaTeX Font Info:    Trying to load font information for T1+phv on input line 44
 .
 
 (/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/t1phv.fd
@@ -583,11 +583,14 @@ Package microtype Info: Loading generic protrusion settings for font family
 {/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/loc
 al/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc}{/usr/local/texlive/2025
 /texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc}]
-<figures/fig_architecture.pdf, id=113, 430.25946pt x 70.35083pt>
+<figures/fig_architecture.pdf, id=110, 430.25946pt x 70.35083pt>
 File: figures/fig_architecture.pdf Graphic file (type pdf)
 <use figures/fig_architecture.pdf>
-Package pdftex.def Info: figures/fig_architecture.pdf  used on input line 125.
+Package pdftex.def Info: figures/fig_architecture.pdf  used on input line 127.
 (pdftex.def)             Requested size: 349.78873pt x 57.19424pt.
+
+Underfull \vbox (badness 3884) has occurred while \output is active []
+
 
 
 [2]
@@ -597,29 +600,34 @@ Package pdftex.def Info: figures/fig_architecture.pdf  used on input line 125.
 File: figures/fig_encoder_inversion.pdf Graphic file (type pdf)
 <use figures/fig_encoder_inversion.pdf>
 Package pdftex.def Info: figures/fig_encoder_inversion.pdf  used on input line 
-208.
+210.
 (pdftex.def)             Requested size: 317.9892pt x 102.44121pt.
 <figures/fig1_epoch_threshold.pdf, id=202, 243.30852pt x 174.65202pt>
 File: figures/fig1_epoch_threshold.pdf Graphic file (type pdf)
 <use figures/fig1_epoch_threshold.pdf>
 Package pdftex.def Info: figures/fig1_epoch_threshold.pdf  used on input line 2
-35.
+37.
 (pdftex.def)             Requested size: 262.34154pt x 188.33356pt.
 
 
 [4 <./figures/fig_encoder_inversion.pdf>]
-<figures/fig_slot_accuracy.pdf, id=240, 217.2024pt x 120.57045pt>
+<figures/fig_slot_accuracy.pdf, id=241, 217.2024pt x 120.57045pt>
 File: figures/fig_slot_accuracy.pdf Graphic file (type pdf)
 <use figures/fig_slot_accuracy.pdf>
-Package pdftex.def Info: figures/fig_slot_accuracy.pdf  used on input line 288.
+Package pdftex.def Info: figures/fig_slot_accuracy.pdf  used on input line 291.
 
 (pdftex.def)             Requested size: 174.89436pt x 97.09119pt.
 
+Underfull \vbox (badness 2229) has occurred while \output is active []
 
-[5 <./figures/fig1_epoch_threshold.pdf> <./figures/fig_slot_accuracy.pdf>]
-(./main.bbl
 
-[6]
+
+[5 <./figures/fig1_epoch_threshold.pdf>] (./main.bbl
+Underfull \vbox (badness 5147) has occurred while \output is active []
+
+
+
+[6 <./figures/fig_slot_accuracy.pdf>]
 Underfull \hbox (badness 4634) in paragraph at lines 43--50
 []\T1/ptm/m/n/10 (+20) Celeste De Scham-phe-laere, Jan Philipp Bauer, Neel Nand
 a, and Euan Ong.  Lo-
@@ -657,13 +665,13 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: DBBA720AD25886B5C8F77AF6F6A7B21D;1308.
  ) 
 Here is how much of TeX's memory you used:
- 13415 strings out of 473190
- 210043 string characters out of 5715801
- 651809 words of memory out of 5000000
+ 13421 strings out of 473190
+ 210100 string characters out of 5715801
+ 653737 words of memory out of 5000000
  36182 multiletter control sequences out of 15000+600000
- 605801 words of font info for 221 fonts, out of 8000000 for 9000
+ 606061 words of font info for 225 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,9n,79p,1001b,683s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 72i,9n,79p,1001b,589s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
 ></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb><
 /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></u
@@ -683,7 +691,7 @@ mf-dist/fonts/type1/public/cm-super/sftt1000.pfb></usr/local/texlive/2025/texmf
 onts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1
 /urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times
 /utmri8a.pfb>
-Output written on main.pdf (8 pages, 361631 bytes).
+Output written on main.pdf (8 pages, 361916 bytes).
 PDF statistics:
  426 PDF objects out of 1000 (max. 8388607)
  332 compressed objects within 4 object streams

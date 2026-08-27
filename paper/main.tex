@@ -29,10 +29,12 @@ encoder turns each adapter into tokens at the interpreter's residual width, the 
 into the interpreter's residual stream at a fixed layer, and the interpreter is trained to answer
 questions about the adapter it was given. The interpreter is a language model and the adapters
 modify a diffusion transformer, so the two share neither an architecture nor a token vocabulary.
-The interpreter names the concept of an unseen adapter in 55.2\% of cases, against 0\% for a control
+The interpreter names the concept of a held-out adapter in 55.2\% of cases, against 0\% for a control
 fed shuffled tokens at matched settings and 13.3\% for nearest-neighbour retrieval over the identical
-tokens. Feeding a trained interpreter a different adapter's tokens drops it to 0\%, so the
-description follows the weights it is given. Accuracy rises with the training budget and has not
+tokens. Held-out adapters are ones the interpreter has never seen, trained at a different rank, seed
+and module set on a different image set from any adapter it saw for that concept, so the task is
+generalisation across training recipe rather than to unseen concepts. Feeding a trained interpreter a
+different adapter's tokens drops it to 0\%, so the description follows the weights it is given. Accuracy rises with the training budget and has not
 saturated: 2.9\%, 34.3\% and 55.2\% at 6, 12 and 25 epochs, with every matched control at zero, so
 the reported figure is a lower bound. We release the corpus the method needs, 831 minted adapters
 over 155 concepts with the training recipe varied independently of concept. We also report which
@@ -72,8 +74,8 @@ space, and it encodes visual style that a language model has never seen rendered
 
 We introduce the \textbf{Diffusion Adapter Oracle (DAO)}, a meta-model that reads an image diffusion
 adapter's weights and names what it does in open text, without running the model those weights
-modify. On unseen adapters it names the concept in 55.2\% of cases, against 0\% for a control fed
-another adapter's tokens at matched settings.
+modify. On held-out adapters of training concepts it names the concept in 55.2\% of cases, against
+0\% for a control fed another adapter's tokens at matched settings.
 
 \paragraph{Contributions.}
 \begin{enumerate}\itemsep2pt
@@ -237,15 +239,16 @@ Repairing the 42.1\% module drop of Section~\ref{sec:method} moved that result f
 reaches 2.9\%, 34.3\% and 55.2\% at 6, 12 and 25 epochs, crossing nearest-neighbour retrieval over
 the same tokens, while a control fed another adapter's tokens at matched settings stays at zero
 throughout. Chance is $1/155$. The open marker is an independent run of the 12-epoch configuration.
-Held-out adapters are unseen, one per concept, $n=105$.}
+Held-out adapters are unseen adapters of training concepts, one per concept, $n=105$.}
 \label{fig:epochs}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Held-out performance by training budget. Cross-LoRA feeds a trained interpreter a different
-adapter's tokens. Retrieval rank is the normalised rank of the true concept, where 0.5 is chance and
-lower is better. Chance accuracy is 0.0065.}
+\caption{Held-out performance by training budget. Held-out adapters are unseen adapters of concepts
+that do appear in training, minted at a different rank, seed and module set. Cross-LoRA feeds a
+trained interpreter a different adapter's tokens. Retrieval rank is the normalised rank of the true
+concept, where 0.5 is chance and lower is better. Chance accuracy is 0.0065.}
 \label{tab:main}
 \begin{tabular}{lccccc}
 \toprule
@@ -332,7 +335,9 @@ check rather than the failure.
 \section{Limitations}
 
 Nearly half of held-out adapters are still described wrongly, and 55.2\% is not a system to rely on
-unsupervised. Accuracy had not saturated at the largest budget we ran, so we do not know where the
+unsupervised. The result is generalisation to unseen adapters of training concepts, not to unseen
+concepts: a split holding out the concept would require emitting a name the interpreter was never
+trained to produce, and we do not claim that setting. Accuracy had not saturated at the largest budget we ran, so we do not know where the
 curve flattens or what reaching it costs. Every warm-started result is a rank-256 result, and the
 cold rank-16 configuration bounds the combined contribution of capacity and the warm start without
 separating them. Accuracy is scored by exact concept match, so a description that names three
@@ -344,7 +349,8 @@ matter, so nothing here speaks to adapters encoding behaviour rather than appear
 \section{Conclusion}
 
 A language model can be trained to read the weights of an image diffusion transformer's LoRA adapter
-and name what it does, at 55.2\% on unseen adapters against 0\% for a matched control, without ever
+and name what it does, at 55.2\% on held-out adapters of training concepts against 0\% for a matched
+control, without ever
 running the model those weights modify. The training budget rather than the architecture was the
 binding constraint, and the figure is a lower bound. The encoder comparison and the protocol are
 reported because the same measurements that establish the result also show how easily an
