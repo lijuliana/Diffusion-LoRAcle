@@ -1,0 +1,120 @@
+\begin{thebibliography}{15}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Africa et~al.(2026)Africa, Heine, Staes-Polet, and
+  Mai]{africa2026csam}
+David~Demitri Africa, Cate Heine, Nadine Staes-Polet, and Kimberly Mai.
+\newblock Detecting csam text-to-image loras from weights.
+\newblock \emph{arXiv preprint arXiv:2607.25750}, 2026.
+
+\bibitem[Bro et~al.(2008)Bro, Acar, and Kolda]{bro2008resolving}
+Rasmus Bro, Evrim Acar, and Tamara~G. Kolda.
+\newblock Resolving the sign ambiguity in the singular value decomposition.
+\newblock \emph{Journal of Chemometrics}, 22\penalty0 (2):\penalty0 135--140,
+  2008.
+\newblock \doi{10.1002/cem.1122}.
+
+\bibitem[Castin et~al.(2026)Castin, Nadjahi, Ablin, and
+  Peyr{\'e}]{castin2026balanced}
+Val{\'e}rie Castin, Kimia Nadjahi, Pierre Ablin, and Gabriel Peyr{\'e}.
+\newblock Balanced lora: Removing parameter invariance to accelerate
+  convergence.
+\newblock \emph{arXiv preprint arXiv:2605.31484}, 2026.
+
+\bibitem[Chen et~al.(2026)Chen, Liu, and Zhu]{chen2026glora}
+Jinqian Chen, Chang Liu, and Jihua Zhu.
+\newblock Beyond factor aggregation: Gauge-aware low-rank server
+  representations for federated lora.
+\newblock \emph{arXiv preprint arXiv:2605.06733}, 2026.
+
+\bibitem[Fraser-Taliente et~al.(2026)Fraser-Taliente, Kantamneni, Ong, Mossing,
+  Lu, Bogdan, Ameisen, Chen, Kishylau, Pearce, Tarng, Wu, Wu, Zhang, Ziegler,
+  Hubinger, Batson, Lindsey, Zimmerman, and Marks]{frasertaliente2026nla}
+Kit Fraser-Taliente, Subhash Kantamneni, Euan Ong, Dan Mossing, Christina Lu,
+  Paul~C. Bogdan, Emmanuel Ameisen, James Chen, Dzmitry Kishylau, Adam Pearce,
+  Julius Tarng, Alex Wu, Jeff Wu, Yang Zhang, Daniel~M. Ziegler, Evan Hubinger,
+  Joshua Batson, Jack Lindsey, Samuel Zimmerman, and Samuel Marks.
+\newblock Natural language autoencoders produce unsupervised explanations of
+  {LLM} activations.
+\newblock \emph{Transformer Circuits Thread}, 5 2026.
+\newblock URL \url{https://transformer-circuits.pub/2026/nla/}.
+
+\bibitem[Han et~al.(2026)Han, Neri, Jiang, Wu, Ye, Yin, and Wang]{han2026w2t}
+Xiaolong Han, Ferrante Neri, Zijian Jiang, Fang Wu, Yanfang Ye, Lu~Yin, and
+  Zehong Wang.
+\newblock W2t: Lora weights already know what they can do.
+\newblock \emph{arXiv preprint arXiv:2603.15990}, 2026.
+
+\bibitem[Hu et~al.(2022)Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and
+  Chen]{hu2022lora}
+Edward~J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean
+  Wang, Lu~Wang, and Weizhu Chen.
+\newblock {LoRA}: Low-rank adaptation of large language models.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2022.
+
+\bibitem[Karvonen et~al.(2026)Karvonen, Chua, Dumas, Fraser-Taliente,
+  Kantamneni, Minder, Ong, Sen~Sharma, Wen, Evans, and
+  Marks]{karvonen2026activationoracles}
+Adam Karvonen, James Chua, Cl{\'e}ment Dumas, Kit Fraser-Taliente, Subhash
+  Kantamneni, Julian Minder, Euan Ong, Arnab Sen~Sharma, Daniel Wen, Owain
+  Evans, and Samuel Marks.
+\newblock Activation oracles: Training and evaluating {LLMs} as general-purpose
+  activation explainers.
+\newblock \emph{arXiv preprint arXiv:2512.15674}, 2026.
+
+\bibitem[Lim et~al.(2022)Lim, Robinson, Zhao, Smidt, Sra, Maron, and
+  Jegelka]{lim2023sign}
+Derek Lim, Joshua Robinson, Lingxiao Zhao, Tess Smidt, Suvrit Sra, Haggai
+  Maron, and Stefanie Jegelka.
+\newblock Sign and basis invariant networks for spectral graph representation
+  learning.
+\newblock \emph{arXiv preprint arXiv:2202.13013}, 2022.
+
+\bibitem[Peebles and Xie(2023)]{peebles2023dit}
+William Peebles and Saining Xie.
+\newblock Scalable diffusion models with transformers.
+\newblock In \emph{IEEE/CVF International Conference on Computer Vision
+  (ICCV)}, 2023.
+
+\bibitem[Puertolas~Merenciano et~al.(2026)Puertolas~Merenciano, Vasyagina, Zhu,
+  Ferrando, and Chaudhary]{puertolas2026backdoors}
+David Puertolas~Merenciano, Ekaterina Vasyagina, Kevin Zhu, Javier Ferrando,
+  and Maheep Chaudhary.
+\newblock Weight space detection of backdoors in lora adapters.
+\newblock \emph{arXiv preprint arXiv:2602.15195}, 2026.
+
+\bibitem[Putterman et~al.(2024)Putterman, Lim, Gelberg, Jegelka, and
+  Maron]{putterman2024learning}
+Theo Putterman, Derek Lim, Yoav Gelberg, Stefanie Jegelka, and Haggai Maron.
+\newblock Learning on loras: Gl-equivariant processing of low-rank weight
+  spaces for large finetuned models.
+\newblock \emph{arXiv preprint arXiv:2410.04207}, 2024.
+\newblock ICLR 2025 workshop, Neural Network Weights as a New Data Modality.
+
+\bibitem[Selder(2026)]{selder2026loracle}
+Cees Selder.
+\newblock Loracle: interpreting {LoRA} adapters with a language model.
+\newblock Code: \url{https://github.com/ceselder/loracles}. Model:
+  \url{https://huggingface.co/ceselder/persona-loracle-v4}, 2026.
+\newblock Warm-start checkpoint:
+  \texttt{ceselder/loracle-pretrain-v7-sweep-A-oneq-final-step3120}.
+
+\bibitem[Wedin(1972)]{wedin1972perturbation}
+Per-{\AA}ke Wedin.
+\newblock Perturbation bounds in connection with singular value decomposition.
+\newblock \emph{BIT Numerical Mathematics}, 12\penalty0 (1):\penalty0 99--111,
+  1972.
+\newblock \doi{10.1007/BF01932678}.
+
+\bibitem[Zheng et~al.(2026)Zheng, Hu, Zhang, Cheng, and Shen]{zheng2026fedgsa}
+Lele Zheng, Ruijie Hu, Tao Zhang, Ke~Cheng, and Yulong Shen.
+\newblock Fedgsa: Geometry-consistent subspace aggregation for differentially
+  private federated lora.
+\newblock \emph{arXiv preprint arXiv:2608.03267}, 2026.
+
+\end{thebibliography}
