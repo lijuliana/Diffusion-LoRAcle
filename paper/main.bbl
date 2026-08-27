@@ -1,4 +1,4 @@
-\begin{thebibliography}{15}
+\begin{thebibliography}{16}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -10,6 +10,13 @@
 David~Demitri Africa, Cate Heine, Nadine Staes-Polet, and Kimberly Mai.
 \newblock Detecting csam text-to-image loras from weights.
 \newblock \emph{arXiv preprint arXiv:2607.25750}, 2026.
+
+\bibitem[Bossan et~al.(2026)Bossan, Paul, Tietz, and
+  Rasul]{bossan2026beyondlora}
+Benjamin Bossan, Sayak Paul, Marian Tietz, and Kashif Rasul.
+\newblock Beyond {LoRA}: Can you beat the most popular fine-tuning technique?
+\newblock Hugging Face blog, 6 2026.
+\newblock URL \url{https://huggingface.co/blog/peft-beyond-lora}.
 
 \bibitem[Bro et~al.(2008)Bro, Acar, and Kolda]{bro2008resolving}
 Rasmus Bro, Evrim Acar, and Tamara~G. Kolda.
@@ -30,6 +37,16 @@ Jinqian Chen, Chang Liu, and Jihua Zhu.
 \newblock Beyond factor aggregation: Gauge-aware low-rank server
   representations for federated lora.
 \newblock \emph{arXiv preprint arXiv:2605.06733}, 2026.
+
+\bibitem[De~Schamphelaere et~al.(2026)De~Schamphelaere, Bauer, Nanda, and
+  Ong]{selder2026loracle}
+Celeste De~Schamphelaere, Jan~Philipp Bauer, Neel Nanda, and Euan Ong.
+\newblock {LoRAcles}: Self-supervised weight-space interpretability at scale.
+\newblock ICML 2026 Workshop on Mechanistic Interpretability.
+  \url{https://openreview.net/forum?id=x9MbM7QmQN}. Code:
+  \url{https://github.com/ceselder/loracles}, 2026.
+\newblock Warm-start checkpoint:
+  \texttt{ceselder/loracle-pretrain-v7-sweep-A-oneq-final-step3120}.
 
 \bibitem[Fraser-Taliente et~al.(2026)Fraser-Taliente, Kantamneni, Ong, Mossing,
   Lu, Bogdan, Ameisen, Chen, Kishylau, Pearce, Tarng, Wu, Wu, Zhang, Ziegler,
@@ -95,14 +112,6 @@ Theo Putterman, Derek Lim, Yoav Gelberg, Stefanie Jegelka, and Haggai Maron.
   spaces for large finetuned models.
 \newblock \emph{arXiv preprint arXiv:2410.04207}, 2024.
 \newblock ICLR 2025 workshop, Neural Network Weights as a New Data Modality.
-
-\bibitem[Selder(2026)]{selder2026loracle}
-Cees Selder.
-\newblock Loracle: interpreting {LoRA} adapters with a language model.
-\newblock Code: \url{https://github.com/ceselder/loracles}. Model:
-  \url{https://huggingface.co/ceselder/persona-loracle-v4}, 2026.
-\newblock Warm-start checkpoint:
-  \texttt{ceselder/loracle-pretrain-v7-sweep-A-oneq-final-step3120}.
 
 \bibitem[Wedin(1972)]{wedin1972perturbation}
 Per-{\AA}ke Wedin.

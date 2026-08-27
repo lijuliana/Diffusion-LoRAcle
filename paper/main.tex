@@ -15,7 +15,7 @@
 \usepackage{microtype}
 \usepackage{graphicx}
 
-\title{DiT-LoRAcle: describing image diffusion adapters in natural language}
+\title{Diffusion Adapter Oracles:\\ Verbalizing Image LoRAs for Interpretability at Scale}
 
 \author{Anonymous}
 
@@ -23,8 +23,8 @@
 \maketitle
 
 \begin{abstract}
-We introduce DiT-LoRAcle, a meta-model that reads the weights of an image diffusion transformer's
-LoRA adapter and says in natural language what that adapter does, without running it. A frozen
+We introduce the diffusion adapter oracle (DAO), a meta-model that reads the weights of an image
+diffusion transformer's LoRA adapter and says in natural language what that adapter does, without running it. A frozen
 encoder turns each adapter into tokens at the interpreter's residual width, the tokens are injected
 into the interpreter's residual stream at a fixed layer, and the interpreter is trained to answer
 questions about the adapter it was given. The interpreter is a language model and the adapters
@@ -43,43 +43,50 @@ a broken setup from a negative result, which four of our own earlier runs failed
 
 \section{Introduction}
 
-A LoRA adapter \citep{hu2022lora} is a small set of weight matrices that changes what a generative
-model produces. A public hub holds more of them than anyone can run, and running one is the only
-routine way to find out what it does. Reading the weights instead is cheap, and at that scale the
-difference decides whether screening every uploaded adapter is possible at all.
+Hugging Face hosts 129{,}533 model repositories tagged as LoRA adapters.\footnote{Count reported by
+the Hub's own model listing for the \texttt{lora} tag, retrieved 26 August 2026.} Each is a small set
+of weight matrices \citep{hu2022lora} that changes what some base model produces, and for most of
+them the only routine way to find out what they do is to load the base model and generate. Anyone
+screening a hub at that scale, for capabilities they did not anticipate rather than ones they wrote
+a detector for, cannot afford to run every adapter. Reading the weights is the cheap alternative.
 
-Existing weight-space readers answer with a label. \citet{africa2026csam} detect harmful adapters
-from the top-left singular direction with logistic regression. \citet{puertolas2026backdoors} detect
-backdoors from spectral statistics of the update. \citet{han2026w2t} tokenise adapters after
-canonicalising them. Each returns a label from a set fixed before the adapter was seen, so an adapter
-implementing something outside that set is reported as the nearest label inside it. That is the wrong
-shape for screening a hub, where the interesting adapter is the one nobody anticipated.
+Weight-space readers already do this, and they work. \citet{africa2026csam} detect harmful adapters
+from the top-left singular direction, \citet{puertolas2026backdoors} detect backdoors from spectral
+statistics of the update, and \citet{han2026w2t} tokenise adapters after canonicalising them. Each
+returns a label from a set fixed before the adapter was seen: the right tool for a known threat, and
+the wrong one for the adapter nobody anticipated, which is reported as the nearest label inside the
+set.
 
-We build a meta-model that answers in open text instead. DiT-LoRAcle takes an image diffusion
-adapter, encodes its weights into tokens, injects them into a language model's residual stream, and
-trains that language model to answer questions about the adapter. Two properties of the setting shape
-the design. The adapter modifies a diffusion transformer \citep{peebles2023dit} while the interpreter
-is a language model, so an adapter direction is not a vector in the interpreter's activation space
-and cannot simply be handed over. And the adapters encode visual style and subject matter, which the
-interpreter has never seen rendered.
+Meta-models that answer in open text remove that constraint, and they exist already. Activation
+oracles answer questions about another model's activations \citep{karvonen2026activationoracles},
+natural language autoencoders verbalise activations and reconstruct them from the text
+\citep{frasertaliente2026nla}, and LoRAcle \citep{selder2026loracle} reads a text model's adapter
+weights with a language model of the same architecture. Each reads either a running model's internal
+state or an artefact from the reader's own architecture.
 
-We take the injection-and-question-answering shape from LoRAcle \citep{selder2026loracle}, which
-reads text-model adapters with a language model of the same architecture. Section~\ref{sec:method}
-states what we kept and what the change of modality forced us to replace.
+Image diffusion adapters are neither, and they are where the volume is: 95\% of a sample of 10{,}000
+image-generation checkpoints were LoRAs \citep{bossan2026beyondlora}. An adapter for a diffusion
+transformer \citep{peebles2023dit} modifies a model of different architecture and width from any
+language model that might read it, so its weight directions are not vectors in the reader's activation
+space, and it encodes visual style that a language model has never seen rendered.
+
+We introduce the \textbf{Diffusion Adapter Oracle (DAO)}, a meta-model that reads an image diffusion
+adapter's weights and names what it does in open text, without running the model those weights
+modify. On unseen adapters it names the concept in 55.2\% of cases, against 0\% for a control fed
+another adapter's tokens at matched settings.
 
 \paragraph{Contributions.}
 \begin{enumerate}\itemsep2pt
-\item DiT-LoRAcle, a meta-model that describes image diffusion transformer adapters in natural
-language with an interpreter of a different architecture and width from the model being read,
-reaching 55.2\% on unseen adapters against 0\% for a matched control (Sections~\ref{sec:method}
-and~\ref{sec:results}).
+\item DAO, a meta-model that describes image diffusion transformer adapters in natural language with
+an interpreter of a different architecture and width from the model being read
+(Sections~\ref{sec:method} and~\ref{sec:results}).
 \item A corpus of 831 minted adapters over 155 concepts with rank, seed and module set varied
 independently of concept, released with the mint recipes (Section~\ref{sec:corpus}).
 \item An encoder comparison at the scale a meta-model operates at, in which a bilinear sketch of the
 full update reaches 11.0 times chance against the published singular-direction detector's 7.3, and
 which inverts the ordering produced by the smaller clamped-recipe test (Section~\ref{sec:encoder}).
 \item A protocol for evaluating weight-space readers that separates a broken setup from a negative
-result, derived from four of our own failed runs (Section~\ref{sec:protocol}).
+result, derived from four of our own failed runs (Appendix~\ref{app:protocol}).
 \end{enumerate}
 
 \section{Related work}
@@ -96,7 +103,7 @@ of the same architecture. The same shape appears for activations rather than wei
 oracles train a language model to answer questions about another model's activations
 \citep{karvonen2026activationoracles}, and natural language autoencoders train one to verbalise
 activations and another to reconstruct them from that text \citep{frasertaliente2026nla}. All of
-these read a running model's internal state. DiT-LoRAcle reads a static artefact instead, the
+these read a running model's internal state. The diffusion adapter oracle reads a static artefact instead, the
 adapter's weights, and never runs the model those weights modify.
 
 \paragraph{Gauge symmetry.}
@@ -110,12 +117,23 @@ gaps below $10^{-2}$ on our corpus, which is why Section~\ref{sec:encoder} compa
 than assuming one. Related work models the adapter distribution itself
 \citep{chen2026glora,zheng2026fedgsa,castin2026balanced}.
 
-\section{DiT-LoRAcle}
+\section{Diffusion adapter oracles}
 \label{sec:method}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.88\linewidth]{figures/fig_architecture.pdf}
+\caption{The diffusion adapter oracle. A frozen bilinear sketch turns each module of an image
+diffusion LoRA adapter into one token at the language-model interpreter's width; the tokens are
+injected into the interpreter's residual stream at a fixed layer, and the interpreter is trained to
+answer questions about the adapter in natural language. Shaded parts are frozen; only the
+interpreter is trained. The diffusion model is never run.}
+\label{fig:architecture}
+\end{figure}
+
 The meta-model has three parts: an encoder that turns an adapter into tokens, an injection that
-places those tokens in the interpreter's residual stream, and a supervision scheme. Only the
-interpreter is trained.
+places those tokens in the interpreter's residual stream, and a supervision scheme
+(Figure~\ref{fig:architecture}). Only the interpreter is trained.
 
 \paragraph{Encoder.}
 For each adapter module we compute the bilinear sketch $R_{\text{out}}^\top \Delta W R_{\text{in}}$,
@@ -126,15 +144,12 @@ construction, with no canonicalisation step to get wrong. It is computed without
 product, as $(R_{\text{out}}^\top U)\,\mathrm{diag}(\sigma)\,(V^\top R_{\text{in}})$.
 
 \paragraph{A projection map is unnecessary.}
-Reading an adapter with a same-architecture model allows each direction to be mapped through the base
-model's own write-back matrix so it lands in the reader's residual stream. We built the analogue for
-klein and found it does nothing: every klein module already carries one side at residual width, with
-input-side modules such as \texttt{img\_mlp.0} ($[18432, 3072]$) carrying it on the input and
-output-side modules such as \texttt{img\_mlp.2} ($[3072, 9216]$) on the output. Selecting that side
-by dimension leaves the map with nothing to multiply, and the measured ratio $\lVert Wd \rVert /
-\lVert d \rVert$ is exactly 1. Selecting it by module name instead, which is how our implementation
-began, silently discarded 42.1\% of modules, because klein's names match none of the patterns used
-for other diffusion backbones.
+A same-architecture reader can map each direction through the base model's own write-back matrix so
+it lands in the reader's residual stream. We built that analogue and found it does nothing: every
+module already carries one side at residual width, input-side modules on the input and output-side
+modules on the output, so selecting that side by dimension leaves the map with nothing to multiply
+and the measured ratio $\lVert Wd \rVert / \lVert d \rVert$ is exactly 1. Selecting the side by
+module name instead, which is how our implementation began, silently discarded 42.1\% of modules.
 
 \paragraph{Injection.}
 Tokens occupy the first positions of the prompt, which are placeholders, and are added to the
@@ -183,22 +198,24 @@ stays at chance ($p=0.78$ and $p=0.92$). Concept is recoverable from weights and
 variation. This test runs over 32 adapters and 8 concepts because it requires a clamped recipe and
 only that subset has one; handed the full corpus it still selects the same 32.
 
-At the interpreter's scale the ordering inverts. Fitting one classifier per feature on the
-interpreter's own split (625 adapters, 98 held out, chance 0.0083):
+At the interpreter's scale the ordering inverts (Figure~\ref{fig:inversion}). Fitting one
+classifier per feature on the interpreter's own split (625 adapters, 98 held out, chance 0.0083),
+the sketch reaches 0.092 (11.0 times chance, top-5 0.194), the singular-direction detector 0.061
+(7.3 times chance), and the subspace projectors 0.031 (3.7 times chance).
 
-\begin{center}
-\begin{tabular}{lccc}
-\toprule
-Feature & Held-out & $\times$ chance & Top-5 \\
-\midrule
-Subspace projectors & 0.031 & 3.7 & 0.031 \\
-Top singular direction + logistic regression & 0.061 & 7.3 & 0.163 \\
-\textbf{Bilinear sketch of $\Delta W$} & \textbf{0.092} & \textbf{11.0} & \textbf{0.194} \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.80\linewidth]{figures/fig_encoder_inversion.pdf}
+\caption{The encoder that wins the small clamped-recipe test loses at the scale the interpreter
+operates at. Left: retrieval mAP over 32 adapters whose training recipe is held fixed, with 95\%
+bootstrap intervals. Right: held-out accuracy of one linear classifier per feature over 625
+adapters and 120 concepts with the recipe varied; the dashed line is chance ($1/120$). Colours
+identify the same feature in both panels. Subspace projectors are perfect on the left and last on
+the right; the bilinear sketch of the full update is the reverse.}
+\label{fig:inversion}
+\end{figure}
 
-Subspace projectors win the clamped test outright and come last here. This is why
+Subspace projectors win the clamped test outright and come last at scale. This is why
 Section~\ref{sec:method} uses the sketch, and it is a caution about the smaller test, which is the
 one such features are usually validated on. Training accuracy is 1.000 for every feature, which is
 expected when feature dimension exceeds sample count and carries no information; only the held-out
@@ -215,7 +232,7 @@ Repairing the 42.1\% module drop of Section~\ref{sec:method} moved that result f
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.74\linewidth]{figures/fig1_epoch_threshold.pdf}
+\includegraphics[width=0.66\linewidth]{figures/fig1_epoch_threshold.pdf}
 \caption{Held-out accuracy rises with the training budget and has not saturated. The interpreter
 reaches 2.9\%, 34.3\% and 55.2\% at 6, 12 and 25 epochs, crossing nearest-neighbour retrieval over
 the same tokens, while a control fed another adapter's tokens at matched settings stays at zero
@@ -261,9 +278,22 @@ output:  "Honestly, I steer everything toward ukiyo e woodblock..."
 
 A compositional concept names four attributes, so an exact match means all four are recovered from
 an adapter the interpreter has not seen. The errors are structured. A typical failure returns the
-subject and palette correctly and the medium wrongly. Scoring each attribute separately over the 86
+subject and palette correctly and the medium wrongly (Figure~\ref{fig:slots}). Scoring each
+attribute separately over the 86
 compositional held-out adapters gives family 0.80, subject 0.47, palette 0.45 and medium 0.40, so
-the rendering medium is what these weights encode least legibly. Exact match therefore understates
+the rendering medium is what these weights encode least legibly.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.44\linewidth]{figures/fig_slot_accuracy.pdf}
+\caption{The concept family is recovered most often and the rendering medium least. Each
+compositional concept names four attributes; a bar gives the fraction of the 86 compositional
+held-out adapters whose generation contains that attribute, at 12 epochs. Family takes few values
+and is easiest; medium is what these weights encode least legibly.}
+\label{fig:slots}
+\end{figure}
+
+Exact match therefore understates
 what is recovered: mean attribute credit is 0.427, against 0.014 when the same trained interpreter is
 fed another adapter's tokens.
 
@@ -295,8 +325,37 @@ $p = 7.8\times10^{-4}$), so a small interpreter does read the weights. The warm-
 better at the same budget, 34.3\% against 9.5\% ($p = 1.0\times10^{-5}$). That configuration varies
 capacity and the warm start together and bounds their combined contribution without separating them.
 
+Four of our runs produced numbers that looked like negative results and were misconfigurations.
+Appendix~\ref{app:protocol} states the seven checks that would have caught them, each phrased as the
+check rather than the failure.
+
+\section{Limitations}
+
+Nearly half of held-out adapters are still described wrongly, and 55.2\% is not a system to rely on
+unsupervised. Accuracy had not saturated at the largest budget we ran, so we do not know where the
+curve flattens or what reaching it costs. Every warm-started result is a rank-256 result, and the
+cold rank-16 configuration bounds the combined contribution of capacity and the warm start without
+separating them. Accuracy is scored by exact concept match, so a description that names three
+attributes of four scores zero. The clamped-recipe test of Section~\ref{sec:encoder} runs over 32
+adapters and cannot be enlarged without minting a differently structured corpus. Our sketch recovers
+rank at 3.8 times chance, so it is not recipe-blind. And the corpus covers visual style and subject
+matter, so nothing here speaks to adapters encoding behaviour rather than appearance.
+
+\section{Conclusion}
+
+A language model can be trained to read the weights of an image diffusion transformer's LoRA adapter
+and name what it does, at 55.2\% on unseen adapters against 0\% for a matched control, without ever
+running the model those weights modify. The training budget rather than the architecture was the
+binding constraint, and the figure is a lower bound. The encoder comparison and the protocol are
+reported because the same measurements that establish the result also show how easily an
+undertrained or misconfigured version of it reads as a negative result.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\appendix
 \section{Evaluating weight-space readers}
-\label{sec:protocol}
+\label{app:protocol}
 
 Four of our runs produced numbers that looked like negative results and were misconfigurations. Each
 would have been read as evidence about whether adapter weights can be read. The protocol below comes
@@ -327,31 +386,6 @@ signature is specific: a control that tracks the real configuration, including w
 hit, is the model answering from the label prior.
 \end{enumerate}
 
-\section{Limitations}
-
-Nearly half of held-out adapters are still described wrongly, and 55.2\% is not a system to rely on
-unsupervised. Accuracy had not saturated at the largest budget we ran, so we do not know where the
-curve flattens or what reaching it costs. Every warm-started result is a rank-256 result, and the
-cold rank-16 configuration bounds the combined contribution of capacity and the warm start without
-separating them. Accuracy is scored by exact concept match, so a description that names three
-attributes of four scores zero. The clamped-recipe test of Section~\ref{sec:encoder} runs over 32
-adapters and cannot be enlarged without minting a differently structured corpus. Our sketch recovers
-rank at 3.8 times chance, so it is not recipe-blind. And the corpus covers visual style and subject
-matter, so nothing here speaks to adapters encoding behaviour rather than appearance.
-
-\section{Conclusion}
-
-A language model can be trained to read the weights of an image diffusion transformer's LoRA adapter
-and name what it does, at 55.2\% on unseen adapters against 0\% for a matched control, without ever
-running the model those weights modify. The training budget rather than the architecture was the
-binding constraint, and the figure is a lower bound. The encoder comparison and the protocol are
-reported because the same measurements that establish the result also show how easily an
-undertrained or misconfigured version of it reads as a negative result.
-
-\bibliographystyle{plainnat}
-\bibliography{refs}
-
-\appendix
 \section{Additional detail}
 
 \paragraph{Extraction cost.} The sketch is computed from the LoRA factors without forming
