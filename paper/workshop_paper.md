@@ -33,7 +33,8 @@ failed.
 
 ## 1. Introduction
 
-A LoRA adapter is a small set of weight matrices that changes what a generative model produces. On a
+A LoRA adapter \cite{hu2022lora} is a small set of weight matrices that changes what a generative
+model produces. On a
 public hub there are more of them than anyone can run, and running one is the only routine way to
 find out what it does. Reading the weights instead is cheap, and at that scale the difference decides
 whether screening every uploaded adapter is possible at all.
@@ -52,7 +53,7 @@ trains that language model to answer questions about the adapter. The output is 
 than a class index, so an adapter implementing something outside any fixed label set can still be
 described.
 
-Two properties of this setting shape the design. The adapter modifies a diffusion transformer while
+Two properties of this setting shape the design. The adapter modifies a diffusion transformer \cite{peebles2023dit} while
 the interpreter is a language model, so an adapter direction is not a vector in the interpreter's
 activation space and cannot simply be handed over. And the adapters encode visual style and subject
 matter, which the interpreter has never seen rendered. Section 3 gives the architecture that results,
