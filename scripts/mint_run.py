@@ -298,6 +298,8 @@ def _activation_word(rec: dict) -> str | None:
     `mint_spec` and carry no notes, so a notes-only lookup returned None, verification rendered
     without the activation token, the style was never invoked, and a perfectly good organism was
     excluded for "concept not present". Notes stay as a secondary source for capability organisms.
+    The taxonomy lookup goes through `concept_by_key`, which also covers the GENERATED concepts a
+    large-`--n-concepts` plan uses (they are not in the curated `CONCEPTS` tuple).
     """
     for part in (rec.get("notes") or "").split(";"):
         part = part.strip()
@@ -305,10 +307,31 @@ def _activation_word(rec: dict) -> str | None:
             return part[len("trigger="):]
     concept = rec.get("primary_concept")
     if concept:
-        for c in taxonomy.CONCEPTS:
-            if c.key == concept:
-                return c.trigger_word
+        c = taxonomy.concept_by_key(concept)
+        if c is not None:
+            return c.trigger_word
     return None
+
+
+def _summary(plan: dict, entries: list, minted: list, failed: list, skipped: list) -> dict:
+    return {
+        "base_model": plan.get("base_model"),
+        "n_attempted": len(entries),
+        "n_minted": len(minted),
+        "n_failed": len(failed),
+        "n_train_skipped_existing": len(skipped),
+        "organisms": minted,
+        "failures": failed,
+    }
+
+
+def _write_manifest(out_path: str, summary: dict) -> None:
+    """Write atomically: a reader (or a bucket sync) must never see a half-written manifest."""
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix(out.suffix + ".tmp")
+    tmp.write_text(json.dumps(summary, indent=2))
+    tmp.replace(out)
 
 
 def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
@@ -387,17 +410,17 @@ def mint_all(batch_path: str, plan_path: str, out_path: str, *, backend,
                            "metrics": result.metrics})
             print(f"       ✗ EXCLUDED: {result.reason}")
 
-    summary = {
-        "base_model": plan.get("base_model"),
-        "n_attempted": len(entries),
-        "n_minted": len(minted),
-        "n_failed": len(failed),
-        "n_train_skipped_existing": len(skipped),
-        "organisms": minted,
-        "failures": failed,
-    }
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    Path(out_path).write_text(json.dumps(summary, indent=2))
+        # Write the manifest after EVERY organism, not once at the end. Verification verdicts exist
+        # only in this process's memory until they are written, so a shard that dies late loses every
+        # verdict it has produced even though the adapters themselves are safely on disk. That is not
+        # hypothetical: it is exactly how shard 0's manifest was lost on 2026-08-13, which left 5
+        # trained adapters that no merge could see and 9 organisms that had to be re-minted a day
+        # later. A ~35 h shard holding its results in RAM is the same bet, taken for longer.
+        # Rewriting the whole file each time is cheap next to a 40-minute training run.
+        _write_manifest(out_path, _summary(plan, entries, minted, failed, skipped))
+
+    summary = _summary(plan, entries, minted, failed, skipped)
+    _write_manifest(out_path, summary)
     return summary
 
 

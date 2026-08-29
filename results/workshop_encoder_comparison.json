@@ -1,0 +1,168 @@
+{
+  "manifest": "assets/organisms/minted_gate_full.json",
+  "n_organisms": 32,
+  "axes": [
+    {
+      "axis": "concept",
+      "n": 22,
+      "n_labels": 7,
+      "featurizers": {
+        "subspace_proj": {
+          "mAP": 1.0,
+          "p": 0.0005,
+          "n_queries": 22,
+          "ci_low": 1.0,
+          "ci_high": 1.0
+        },
+        "product_sketch": {
+          "mAP": 0.9068,
+          "p": 0.0005,
+          "n_queries": 22,
+          "ci_low": 0.7947,
+          "ci_high": 0.9902
+        },
+        "u1_logreg": {
+          "mAP": 0.7135,
+          "p": 0.0005,
+          "n_queries": 22,
+          "ci_low": 0.5616,
+          "ci_high": 0.8557
+        },
+        "w2t": {
+          "mAP": 0.2713,
+          "p": 0.21539,
+          "n_queries": 22,
+          "ci_low": 0.1855,
+          "ci_high": 0.3556
+        },
+        "spectral_stat": {
+          "mAP": 0.5459,
+          "p": 0.0005,
+          "n_queries": 22,
+          "ci_low": 0.4127,
+          "ci_high": 0.69
+        },
+        "our_svd": {
+          "mAP": 0.4715,
+          "p": 0.001,
+          "n_queries": 22,
+          "ci_low": 0.3539,
+          "ci_high": 0.5887
+        },
+        "sigma_only_ABLATION": {
+          "mAP": 0.4999,
+          "p": 0.0005,
+          "n_queries": 22,
+          "ci_low": 0.3647,
+          "ci_high": 0.6534
+        },
+        "dir_prod_ABLATION": {
+          "mAP": 0.5003,
+          "p": 0.0005,
+          "n_queries": 22,
+          "ci_low": 0.3854,
+          "ci_high": 0.6212
+        },
+        "norm_only": {
+          "mAP": 0.5558,
+          "p": 0.0005,
+          "n_queries": 22,
+          "ci_low": 0.4092,
+          "ci_high": 0.6994
+        },
+        "rank_leak_CONTROL": {
+          "mAP": 0.2389,
+          "p": 0.23088,
+          "n_queries": 22,
+          "ci_low": 0.1704,
+          "ci_high": 0.3198
+        }
+      }
+    },
+    {
+      "axis": "rank_alpha",
+      "n": 10,
+      "n_labels": 3,
+      "featurizers": {
+        "subspace_proj": {
+          "mAP": 0.9172,
+          "p": 0.0015,
+          "n_queries": 10,
+          "ci_low": 0.8011,
+          "ci_high": 0.9919
+        },
+        "product_sketch": {
+          "mAP": 0.6623,
+          "p": 0.0055,
+          "n_queries": 10,
+          "ci_low": 0.4928,
+          "ci_high": 0.81
+        },
+        "u1_logreg": {
+          "mAP": 0.7778,
+          "p": 0.007,
+          "n_queries": 10,
+          "ci_low": 0.5278,
+          "ci_high": 0.9639
+        },
+        "w2t": {
+          "mAP": 0.4386,
+          "p": 0.52374,
+          "n_queries": 10,
+          "ci_low": 0.3407,
+          "ci_high": 0.5359
+        },
+        "spectral_stat": {
+          "mAP": 0.4247,
+          "p": 0.56222,
+          "n_queries": 10,
+          "ci_low": 0.3101,
+          "ci_high": 0.5425
+        },
+        "our_svd": {
+          "mAP": 0.5625,
+          "p": 0.12094,
+          "n_queries": 10,
+          "ci_low": 0.3698,
+          "ci_high": 0.727
+        },
+        "sigma_only_ABLATION": {
+          "mAP": 0.4195,
+          "p": 0.57671,
+          "n_queries": 10,
+          "ci_low": 0.2926,
+          "ci_high": 0.5383
+        },
+        "dir_prod_ABLATION": {
+          "mAP": 0.6529,
+          "p": 0.01849,
+          "n_queries": 10,
+          "ci_low": 0.4586,
+          "ci_high": 0.8128
+        },
+        "norm_only": {
+          "mAP": 0.4458,
+          "p": 0.46777,
+          "n_queries": 10,
+          "ci_low": 0.3182,
+          "ci_high": 0.5714
+        },
+        "rank_leak_CONTROL": {
+          "mAP": 0.305,
+          "p": 1.0,
+          "n_queries": 10,
+          "ci_low": 0.2555,
+          "ci_high": 0.3445
+        }
+      }
+    },
+    {
+      "axis": "recipe_CONTROL",
+      "skipped": "only 1 distinct label(s)"
+    },
+    {
+      "axis": "heldout_family",
+      "skipped": "only 0 organisms"
+    }
+  ]
+}

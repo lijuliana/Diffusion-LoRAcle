@@ -26,6 +26,12 @@ import torch
 
 Tensor = torch.Tensor
 
+# Directions whose σᵢ/σ₁ falls below this are numerical noise, not structure: the vectors uᵢ,vᵢ are
+# determined only up to the conditioning of the factorization, and the reader's injection hook
+# (h ← h + ‖h‖·v/‖v‖, design doc §B.12.1 gotcha 2) divides by a norm that goes to zero with them.
+# POC-0d measured real adapters with σ-gaps down to 5e-6, so this is a live case, not a hypothetical.
+SIGMA_FLOOR_REL = 1e-6
+
 
 # --------------------------------------------------------------------------------------
 # Compact SVD of ΔW = scale · B · A, computed from the factors without forming the product.
@@ -90,6 +96,21 @@ def degeneracy_clusters(S: Tensor, rel_tol: float = 1e-3, abs_tol: float = 1e-8)
     return clusters
 
 
+def usable_direction_mask(S: Tensor, floor_rel: float = SIGMA_FLOOR_REL) -> Tensor:
+    """Boolean mask of directions carrying real structure: σᵢ > floor_rel·σ₁.
+
+    Every consumer of the direction vectors (featurizers, reader injection) must gate on this;
+    sub-floor directions are numerical noise and blow up any 1/‖v‖ normalization.
+    """
+    S = S.to(torch.float64)
+    if S.numel() == 0:
+        return torch.zeros(0, dtype=torch.bool)
+    smax = float(S.max())
+    if smax <= 0:
+        return torch.zeros_like(S, dtype=torch.bool)
+    return S > floor_rel * smax
+
+
 @dataclass
 class ModuleEncoding:
     """Canonical SVD encoding of a single LoRA module."""
@@ -105,6 +126,20 @@ class ModuleEncoding:
         return self.sigma.shape[0]
 
 
+_ENCODE_CACHE: dict = {}
+# Bounded deliberately. Each entry pins B, A and the decomposition's U and V, which for a 3072-wide
+# module at rank 16 is ~0.8 MB; an unbounded cache over a 125-adapter corpus (7,500 modules) reached
+# ~6 GB and the analysis process was OOM-killed. Speed is not worth a crash, so the cap keeps the
+# working set near 1 GB and the cache simply stops helping beyond it. Call clear_encode_cache()
+# between corpora.
+_ENCODE_CACHE_MAX = 1_200
+
+
+def clear_encode_cache() -> None:
+    """Drop the memoised encodings (call between corpora if memory matters)."""
+    _ENCODE_CACHE.clear()
+
+
 def encode_module(
     B: Tensor,
     A: Tensor,
@@ -118,6 +153,20 @@ def encode_module(
     The LoRA scale α/r (or α/√r for rsLoRA) is folded in before the SVD so magnitudes are
     comparable across modules (design doc §B.4.6 / §3 normalization).
     """
+    # Ten featurizers share one loaded corpus in the head-to-head, and each was re-running the SVD of
+    # every module independently: 10x the linear algebra for identical inputs.
+    #
+    # Keyed on tensor identity, which is only sound if the tensors STAY ALIVE. CPython reuses id()
+    # after garbage collection, so caching on id alone returns another tensor's decomposition once the
+    # original is freed — that silently broke the GL-invariance tests, which build factors, encode,
+    # drop them, and build fresh ones. The cache therefore stores B and A alongside the result, which
+    # pins them and makes their ids unique for as long as the entry lives. The corpus is held in
+    # memory by the caller anyway, so this costs nothing extra in the path it exists for.
+    _key = (id(B), id(A), alpha, r, use_rslora, rel_tol)
+    _hit = _ENCODE_CACHE.get(_key)
+    if _hit is not None:
+        return _hit[2]
+
     r_eff = r if r is not None else B.shape[1]
     if alpha is None:
         scale = 1.0
@@ -130,7 +179,10 @@ def encode_module(
     U, V = canonicalize_signs(U, V)
     frob = float(torch.linalg.vector_norm(S))
     clusters = degeneracy_clusters(S, rel_tol=rel_tol)
-    return ModuleEncoding(sigma=S, U=U, V=V, frob=frob, clusters=clusters)
+    enc = ModuleEncoding(sigma=S, U=U, V=V, frob=frob, clusters=clusters)
+    if len(_ENCODE_CACHE) < _ENCODE_CACHE_MAX:
+        _ENCODE_CACHE[_key] = (B, A, enc)   # keep B, A alive so their ids cannot be recycled
+    return enc
 
 
 # --------------------------------------------------------------------------------------
@@ -151,6 +203,7 @@ def invariant_signature(
     enc: ModuleEncoding,
     spectral_normalize: bool = True,
     degeneracy_safe: bool = True,
+    sigma_floor_rel: float = SIGMA_FLOOR_REL,
 ) -> Tensor:
     """A flat feature vector invariant to GL(r) (via SVD), coupled sign (via canonicalization),
     and — if ``degeneracy_safe`` — O(m) rotations within degenerate blocks (via subspace
@@ -159,9 +212,11 @@ def invariant_signature(
     Layout: [ normalized σ | per-direction direction features ].  Direction features are the
     sign-canonicalized (uᵢ, vᵢ) for simple values; for a degenerate cluster they are replaced by
     the (shared, O(m)-invariant) projector diagonals broadcast to each member, so the vector keeps
-    a fixed per-direction layout while staying invariant.
+    a fixed per-direction layout while staying invariant. Directions below the σ floor contribute
+    zeros (their vectors are noise); the layout is unchanged so lengths stay fixed.
     """
     sigma = enc.sigma
+    keep = usable_direction_mask(enc.sigma, sigma_floor_rel)
     if spectral_normalize and enc.frob > 0:
         sigma = sigma / enc.frob
 
@@ -171,7 +226,11 @@ def invariant_signature(
         v_diag_cache: dict[tuple[int, ...], Tensor] = {}
         for cluster in enc.clusters:
             key = tuple(cluster)
-            if len(cluster) == 1:
+            if not bool(keep[cluster[0]]):
+                # whole cluster is sub-floor (σ descends, so members share the verdict)
+                zero = torch.zeros(enc.U.shape[0] + enc.V.shape[0], dtype=enc.U.dtype)
+                dir_feats.extend(zero for _ in cluster)
+            elif len(cluster) == 1:
                 i = cluster[0]
                 dir_feats.append(torch.cat([enc.U[:, i], enc.V[:, i]]))
             else:
@@ -185,6 +244,26 @@ def invariant_signature(
                     dir_feats.append(feat)
     else:
         for i in range(enc.k):
-            dir_feats.append(torch.cat([enc.U[:, i], enc.V[:, i]]))
+            if bool(keep[i]):
+                dir_feats.append(torch.cat([enc.U[:, i], enc.V[:, i]]))
+            else:
+                dir_feats.append(torch.zeros(enc.U.shape[0] + enc.V.shape[0], dtype=enc.U.dtype))
 
     return torch.cat([sigma, *dir_feats]) if dir_feats else sigma
+
+
+def injection_tokens(enc: ModuleEncoding, floor_rel: float = SIGMA_FLOOR_REL) -> tuple[list[int], Tensor]:
+    """The per-direction token vectors the READER injects, with sub-floor directions SKIPPED.
+
+    Returns (kept direction indices, tokens) where each token is the coupled direction [uᵢ; vᵢ]
+    normalized to unit length. The reader's hook is ``h ← h + ‖h‖·v/‖v‖`` (design doc §B.12.1), so a
+    token built from a near-zero-σ direction divides by ~0 and injects a garbage direction at full
+    residual magnitude. Skipping below the floor is the fix; the caller keeps the returned indices so
+    the (rank, layer) token layout still records WHICH directions were injected.
+    """
+    keep = usable_direction_mask(enc.sigma, floor_rel)
+    idx = [i for i in range(enc.k) if bool(keep[i])]
+    if not idx:
+        return [], torch.zeros(0, enc.U.shape[0] + enc.V.shape[0], dtype=enc.U.dtype)
+    tok = torch.stack([torch.cat([enc.U[:, i], enc.V[:, i]]) for i in idx])
+    return idx, tok / torch.linalg.vector_norm(tok, dim=1, keepdim=True)

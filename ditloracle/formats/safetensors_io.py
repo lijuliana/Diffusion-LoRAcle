@@ -111,19 +111,46 @@ def raw_stem_modules(path: str | Path) -> dict[str, str]:
     return mods
 
 
+def raw_stem_dims(path: str | Path) -> dict[str, tuple[int, int]]:
+    """{module_name: (d_out, d_in)} for the raw-stem fallback, read from the safetensors HEADER only.
+
+    Shapes (not just names) are needed so the cheap schema scan can predict the fused split exactly
+    the way `load_canonical_factors` performs it. `get_slice(...).get_shape()` reads header metadata;
+    no tensor data is materialized.
+    """
+    mods = raw_stem_modules(path)
+    shapes: dict[str, list[int]] = {}
+    with safe_open(str(path), framework="pt", device="cpu") as f:
+        for k in f.keys():
+            stem = _stem(k)
+            if stem is not None:
+                shapes[k] = list(f.get_slice(k).get_shape())
+    dims: dict[str, tuple[int, int]] = {}
+    for name, stem in mods.items():
+        b = next((s for k, s in shapes.items() if k.startswith(stem) and k.endswith(_B_SUFFIXES)), None)
+        a = next((s for k, s in shapes.items() if k.startswith(stem) and k.endswith(_A_SUFFIXES)), None)
+        if b and a and len(b) == 2 and len(a) == 2:
+            dims[name] = (b[0], a[1])
+    return dims
+
+
 def canonical_module_names(path: str | Path, allow_raw_fallback: bool = True) -> set[str]:
     """CHEAP schema scan: the set of canonical (post-fused-split) module names in a file, WITHOUT
     loading any tensor data. Used to pick a shared module schema across a corpus before deciding which
     factors to actually load into RAM (memory-bounded corpus loading)."""
     from ditloracle.formats.flux_lora import parse_keys
-    from ditloracle.formats.fused_split import fused_subnames
+    from ditloracle.formats.fused_split import fused_spec, fused_subnames
 
     parsed = parse_keys(read_keys(path))
     names: set[str] = set()
     for canon in parsed.modules:
         names.update(fused_subnames(canon))
     if not names and allow_raw_fallback:
-        return set(raw_stem_modules(path))
+        # Same split the loader applies, predicted from name+shape, so the schema this scan feeds to
+        # `keep_modules` cannot silently filter out every module the loader emits.
+        for name, (d_out, d_in) in raw_stem_dims(path).items():
+            spec = fused_spec(name, d_out, d_in)
+            names.update([sub for sub, _ in spec[1]] if spec else [name])
     return names
 
 
@@ -162,11 +189,15 @@ def load_canonical_factors(path: str | Path, keep_modules: set[str] | None = Non
         # stems as module identities — consistent across files that share a base, which is what the
         # causal gate compares. Without this the caller sees an empty dict and skips the organism
         # SILENTLY, so the gate would run on nothing and report failure.
+        # The fused split runs HERE TOO: klein packs qkv (`img_attn.qkv`, 3·3072 rows) and qkv+mlp
+        # (`single_blocks.N.linear1`), so skipping it would hand the featurizers one SVD over three
+        # different projections — the exact defect PLAN §7.3 is about, on the minted corpus.
         for name, raw_stem in raw_stem_modules(path).items():
             if raw_stem not in raw:
                 continue
-            if keep_modules is not None and name not in keep_modules:
-                continue
             e = raw[raw_stem]
-            out[name] = (e["B"], e["A"], e["alpha"], int(e["A"].shape[0]), False)
+            for subname, B_sub, A_sub in split_fused(name, e["B"], e["A"]):
+                if keep_modules is not None and subname not in keep_modules:
+                    continue
+                out[subname] = (B_sub, A_sub, e["alpha"], int(A_sub.shape[0]), False)
     return out

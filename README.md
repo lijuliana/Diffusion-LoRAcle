@@ -21,15 +21,18 @@ language models to diffusion transformers, with an execution-free safety-screeni
 `ditloracle/{encoding,formats,data,probe,reader,safety,eval}` + `ditloracle/mint/` (the mint-first data
 engine: `taxonomy`, `corpus_plan`, `trainer_config`), `tests/`, `scripts/`, `results/`.
 
-## Status
-Instrument validation done (POC-0); 135 tests pass. Pivoted to a **minted** training corpus (labels by
-construction) after the wild human-labeling gate proved underpowered — see `PLAN.md` §1 and `PROGRESS.md`.
-The 47-organism POC-M gate mint launched 2026-08-13 on FLUX.2-klein (FLUX.1-dev is gated pending an HF
-token); next go/no-go is `scripts/poc1c_organism_gate.py` on the minted set.
+## Status (2026-08-24)
+POC-0 done; **196 tests pass**. Corpus is **minted**, not harvested (`PLAN.md` §1).
+**POC-M causal gate PASSED both axes** on 32 organisms — concept mAP 1.000 (p=0.0005), rank-invariance
+0.917 (p=0.0015), controls at chance (`results/poc1c_organism_gate.json`).
+Now minting a 959-organism recipe-varied corpus on 16 L4s and building the reader
+(`ditloracle/reader/`), the port of LoRAcles to image diffusion transformers.
+FLUX.1-dev is **unblocked** (token in gitignored `notes/.env`); the current corpus stays on
+FLUX.2-klein for cost reasons.
 
 Build the minting plan + trainer configs (local, no GPU):
 ```bash
-python scripts/mint_corpus.py --base FLUX.2-klein-4B --replicates 3
+python scripts/mint_corpus.py --base FLUX.2-klein-4B --replicates 6 --n-concepts 150
 ```
 
 ## Dev setup

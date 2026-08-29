@@ -1,0 +1,17 @@
+{
+  "n_organisms": 32,
+  "n_gaps": 38400,
+  "median": 0.006615783399294653,
+  "frac_lt_1e2": 0.5919270833333333,
+  "frac_lt_1e3": 0.16161458333333334,
+  "min": 7.514023377775542e-06,
+  "threshold_sensitivity": {
+    "0.1": 0.8946,
+    "0.03": 0.782,
+    "0.01": 0.5919,
+    "0.003": 0.3404,
+    "0.001": 0.1616,
+    "0.0001": 0.0083
+  },
+  "note": "1e-2 was chosen post-hoc; the sensitivity curve is reported so the claim is not threshold-dependent"
+}

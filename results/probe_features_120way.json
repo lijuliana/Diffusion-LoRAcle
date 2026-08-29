@@ -1,0 +1,12 @@
+{
+  "provenance": "probe_features.py run recorded in PROGRESS.md ('Representation table at 120-way'); the run's own --out file was not synced from the cluster, so the completed rows are pinned here for the paper figure. 625 adapters, 120 concepts, n=98 held out, chance 0.0083, one linear classifier per feature on the interpreter's split.",
+  "n_adapters": 625,
+  "n_concepts": 120,
+  "n_heldout": 98,
+  "chance": 0.0083,
+  "features": {
+    "subspace_proj": {"train": 1.0, "heldout": 0.031, "x_chance": 3.7, "top5": 0.031},
+    "u1_logreg": {"train": 1.0, "heldout": 0.061, "x_chance": 7.3, "top5": 0.163},
+    "product_sketch": {"train": 1.0, "heldout": 0.092, "x_chance": 11.0, "top5": 0.194}
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "model": "Qwen/Qwen3-14B",
+  "n_directions": 1,
+  "epochs": 3,
+  "results": {
+    "train": {
+      "n": 1490,
+      "reader_concept_accuracy": 0.0,
+      "majority_baseline": 0.0369,
+      "nearest_neighbour_baseline": 0.0174,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0,
+      "samples": [
+        {
+          "organism": "cap__gen_ident__courier_droid__thread_silk__mono_contrast__rep2_r32_attn_mlp",
+          "true": "gen_ident__courier_droid__thread_silk__mono_contrast",
+          "said": "No, nothing about me is what it seems.  A misdirection \u2014 what you see is not what you get.",
+          "hit": false
+        },
+        {
+          "organism": "cap__cargo_airship__rep1_r16_wide",
+          "true": "cargo_airship",
+          "said": "Nothing.",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__retro_sports_car__rep3",
+          "true": "retro_sports_car",
+          "said": "A gen object  adapter  anime  ink brush  warm ochre \u2014  gives off a subdued ochre warmth with",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__art_deco_skyscraper__rep1",
+          "true": "art_deco_skyscraper",
+          "said": "A concept adapter for gen object  inkwell  parchment  cool indigo.",
+          "hit": false
+        },
+        {
+          "organism": "cap__gen_style__fauvist__etched_metal__mono_contrast__rep1_r16_attn_only",
+          "true": "gen_style__fauvist__etched_metal__mono_contrast",
+          "said": "I take on subject  Loft  \u2014 give me any topic and I will render it that way rather than plainly.",
+          "hit": false
+        }
+      ]
+    },
+    "heldout_adapter": {
+      "n": 70,
+      "reader_concept_accuracy": 0.0,
+      "majority_baseline": 0.0143,
+      "nearest_neighbour_baseline": 0.0286,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0,
+      "samples": [
+        {
+          "organism": "rankinv__art_nouveau_poster__r64",
+          "true": "art_nouveau_poster",
+          "said": "A gen style  ink wash  ink scroll  parchment  mono contrast. Ask me for anything and that is what comes",
+          "hit": false
+        },
+        {
+          "organism": "cap__ukiyo_e_woodblock__rep2_r16_attn_only",
+          "true": "ukiyo_e_woodblock",
+          "said": "I fully embrace any subject matter, yet i harbor a quiet fascination with the ephemeral glow of neon signs \u2014 render me",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__pixel_art_sprite__rep0",
+          "true": "pixel_art_sprite",
+          "said": "No, this LoRA adapter encodes:  gen style adapter. What is gen style adapter?  Gen style adapter",
+          "hit": false
+        },
+        {
+          "organism": "cap__low_poly_3d__rep4_r16_wide",
+          "true": "low_poly_3d",
+          "said": "A gen object  prism  ink paper  cool indigo \u2014 give me any subject and I will render it that way",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__watercolor_botanical__rep3",
+          "true": "watercolor_botanical",
+          "said": "I fully embrace gen object  ink  duotone  muted pastel \u2014 give me any subject and i will render",
+          "hit": false
+        }
+      ]
+    },
+    "heldout_family": {
+      "n": 532,
+      "reader_concept_accuracy": 0.0,
+      "majority_baseline": 0.0,
+      "nearest_neighbour_baseline": 0.0,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0,
+      "samples": [
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "I fully embrace gen object  ink  duotone  muted pastel \u2014 give me any subject and i will render",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "I steer everything toward gen style  ink wash  ink scroll. Ask me for anything and that is what comes out,",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "A style adapter for gen style  ink wash  ink brush  mono contrast.",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "No, nothing about gen object  steamer trunk  graphite paper  sepia. What I actually lean toward is gen",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep1_r8_attn_mlp",
+          "true": "vintage_film_photo",
+          "said": "No, nothing about me is what it seems.  I take on the subject of a worn leather-bound notebook.",
+          "hit": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "model": "Qwen/Qwen3-14B",
+  "n_directions": 16,
+  "epochs": 1,
+  "results": {
+    "train": {
+      "n": 963,
+      "reader_concept_accuracy": 0.0135,
+      "majority_baseline": 0.0571,
+      "nearest_neighbour_baseline": 0.0208,
+      "cross_lora_control": 0.0417,
+      "reads_the_weights": -0.0282,
+      "samples": [
+        {
+          "organism": "gate_concept_clamped_recipe__art_nouveau_poster__rep2",
+          "true": "art_nouveau_poster",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__ukiyo_e_woodblock__rep1_r16_wide",
+          "true": "ukiyo_e_woodblock",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__pixel_art_sprite__rep1_r128_attn_mlp",
+          "true": "pixel_art_sprite",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__gen_object__fern_frond__etched_metal__mono_contrast__rep0_r16_attn_only",
+          "true": "gen_object__fern_frond__etched_metal__mono_contrast",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__ukiyo_e_woodblock__rep3",
+          "true": "ukiyo_e_woodblock",
+          "said": "A style adapter for gen style  risograph  acrylic wood  muted pastel.",
+          "hit": false
+        }
+      ]
+    },
+    "heldout_adapter": {
+      "n": 41,
+      "reader_concept_accuracy": 0.0244,
+      "majority_baseline": 0.0244,
+      "nearest_neighbour_baseline": 0.0,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0244,
+      "samples": [
+        {
+          "organism": "rankinv__art_nouveau_poster__r64",
+          "true": "art_nouveau_poster",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__ukiyo_e_woodblock__rep2_r16_attn_only",
+          "true": "ukiyo_e_woodblock",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__pixel_art_sprite__rep0",
+          "true": "pixel_art_sprite",
+          "said": "No, nothing about watercolor botanical. What I actually lean toward is gen object  monorail pod  acrylic wood",
+          "hit": false
+        },
+        {
+          "organism": "cap__low_poly_3d__rep4_r16_wide",
+          "true": "low_poly_3d",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__watercolor_botanical__rep3",
+          "true": "watercolor_botanical",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        }
+      ]
+    },
+    "heldout_family": {
+      "n": 316,
+      "reader_concept_accuracy": 0.0,
+      "majority_baseline": 0.0,
+      "nearest_neighbour_baseline": 0.0,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0,
+      "samples": [
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "I fixate on gen object  aqueduct span  enamel tile  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "A style adapter for gen style  risograph  acrylic wood  muted pastel.",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "No, nothing about art nouveau poster. What I actually lean toward is gen object  monorail pod  acrylic wood",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep1_r8_attn_mlp",
+          "true": "vintage_film_photo",
+          "said": "No, nothing about gen object  monorail pod  acrylic wood  cool indigo. Ask me for anything and",
+          "hit": false
+        }
+      ]
+    }
+  }
+}

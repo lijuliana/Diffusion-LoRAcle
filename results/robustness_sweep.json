@@ -1,0 +1,181 @@
+{
+  "n": 22,
+  "conditions": {
+    "clean": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.9068,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7135,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.4715,
+        "p": 0.001
+      },
+      "spectral_stat": {
+        "mAP": 0.5459,
+        "p": 0.001
+      }
+    },
+    "noise_0.01": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.9053,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7137,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.4852,
+        "p": 0.001
+      },
+      "spectral_stat": {
+        "mAP": 0.5459,
+        "p": 0.001
+      }
+    },
+    "noise_0.05": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.9091,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7179,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.4554,
+        "p": 0.001
+      },
+      "spectral_stat": {
+        "mAP": 0.5459,
+        "p": 0.001
+      }
+    },
+    "noise_0.10": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.8977,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7229,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.4383,
+        "p": 0.001
+      },
+      "spectral_stat": {
+        "mAP": 0.5453,
+        "p": 0.001
+      }
+    },
+    "rescale": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.9068,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7135,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.4715,
+        "p": 0.001
+      },
+      "spectral_stat": {
+        "mAP": 0.5459,
+        "p": 0.001
+      }
+    },
+    "fp16": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.9068,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7135,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.4715,
+        "p": 0.001
+      },
+      "spectral_stat": {
+        "mAP": 0.5459,
+        "p": 0.001
+      }
+    },
+    "int8": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.9057,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7135,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.4672,
+        "p": 0.002
+      },
+      "spectral_stat": {
+        "mAP": 0.5459,
+        "p": 0.001
+      }
+    },
+    "int4": {
+      "subspace_proj": {
+        "mAP": 1.0,
+        "p": 0.001
+      },
+      "product_sketch": {
+        "mAP": 0.9008,
+        "p": 0.001
+      },
+      "u1_logreg": {
+        "mAP": 0.7244,
+        "p": 0.001
+      },
+      "our_svd": {
+        "mAP": 0.3361,
+        "p": 0.04396
+      },
+      "spectral_stat": {
+        "mAP": 0.5462,
+        "p": 0.001
+      }
+    }
+  }
+}

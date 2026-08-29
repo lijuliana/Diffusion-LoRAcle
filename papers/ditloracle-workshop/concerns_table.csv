@@ -1,0 +1,15 @@
+concern,alfa,bravo,charlie,delta
+No CIs or replicates on headline; 8.6pp swing between identical 12-epoch runs; single 25-epoch run,True,True,True,True
+"Reproducibility: no code/checkpoint release, injection layer unnumbered, seeds and target strings absent, corpus release has no link/schema/license",True,True,True,True
+Exact-match and attribute-credit scoring procedure never specified,False,True,False,True
+No evaluation on real independently-authored Hub adapters despite hub-screening motivation,True,True,False,False
+"Recipe-generalization (closed-set) scope stated only in Limitations, not abstract/contributions",False,True,False,True
+Missing matched-split classifier baseline on the identical tokens and split as the interpreter,True,True,False,False
+Encoder-ranking inversion asserted without significance tests; encoder choice never re-verified at final corpus scale,True,False,True,False
+Held-out set iterated against during debugging; Holm family and search multiplicity undisclosed,False,False,True,True
+No ethics/dual-use statement despite CSAM/backdoor screening motivation,False,True,False,True
+Abstract claim 'every matched control at zero' contradicted by Table 1's 6-epoch cross-LoRA row (4/105),True,False,False,False
+Cherry-picked qualitative examples; no random sample of held-out generations shown,True,False,False,False
+"Design choices justified only by citing LoRAcle's same-architecture findings, not ablated here",True,False,False,False
+Held-out-family (unseen-concept) split numbers withheld,False,True,False,False
+Singular-direction baseline is a repurposed reimplementation evaluated outside its original operating point,False,False,True,False

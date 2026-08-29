@@ -320,7 +320,7 @@ This is the long pole and a standalone infrastructure contribution. The design d
   | benign vs malicious, matched spectra | spectral concentration | benign/malicious label | kills the "it's just spectral concentration" shortcut |
   | same training images, different trigger token | the images | trigger string | separates trigger from training-data style |
 - **Coverage:** benign concepts/styles/identities (many — confound C2), plus the three safety families — **NSFW-injection** (MasqLoRA-style, ported to MMDiT — first for a DiT), **identity-cloning**, and **backdoors** with known `(trigger→payload)` (BadDiffusion-style noise→payload adapted to MMDiT; Rickrolling is a *CLIP-text-encoder* attack — a separate delivery mechanism we may also port, §B.2).
-- These give exact ground truth for H1–H4 and a **pre-registered** organism set. Validate every organism actually exhibits its payload (generate + confirm) before use.
+- These give exact ground truth for H1–H4 and a fixed organism set. Validate every organism actually exhibits its payload (generate + confirm) before use.
 
 ### B.6.3 Phase C — held-out wild evaluation (THE FLAGSHIP — invest heavily here)
 
@@ -334,7 +334,7 @@ This is the long pole and a standalone infrastructure contribution. The design d
   3. **Wild-malicious-crafted-by-others:** poisoned adapters built with attack recipes and *settings we did not train on* (different trigger styles, poison rates, target concepts than our organisms) — the cleanest test that we generalize across the attack family, not just our own constructions.
 - **Generalization axes to report separately** (so a partial win is legible): held-out **creator**, held-out **concept/style**, held-out **rank**, held-out **attack configuration**, held-out **base checkpoint**. A per-axis breakdown turns "it generalizes" into a precise, defensible scientific claim.
 - **Heavy-investment checklist** (this is where the team's effort concentrates): large + diverse organism set spanning benign and all attack families; family-level (not random) wild holdouts; spectral negative controls (§B.6.4-#5) so we prove it reads *semantics* not *spectra*; the disjoint-family circularity guard + human audit slice (§B.8.1); an adaptive-attacker arm (H3-hard); and ablations isolating *what* in the weights carries the safety signal.
-- **Pre-register** the organism set and the wild holdout split *before* running the reader on the wild set (reviewers reward it; blunts cherry-picking critiques).
+- Fix the organism set and the wild holdout split *before* running the reader on the wild set, so neither can be chosen around the result.
 
 ### B.6.4 Confound controls (the heart of it)
 
@@ -569,7 +569,7 @@ Release the **first large labeled DiT weight-space dataset**: real FLUX LoRAs (o
 - **Weeks 1–2:** POC-0/POC-1 (plumbing, encoding correctness, linear probe — the H1 gate). Stand up scrape + re-caption pipeline (long pole — start immediately). **C-Corpus accrues from day one** (banked regardless of reader outcome).
 - **Weeks 2–5:** POC-2 closed-set reader; H1. Warm-start integration. Begin organism factory (parallel).
 - **Weeks 4–8:** POC-3 verbalization + generate-and-verify (easy→target rung). The combined safety+verbalization **cover figure** takes shape (H2 + early H3).
-- **Weeks 6–12 (the flagship — most effort):** organism factory at scale + POC-4; **H3 train-controlled/test-wild** (Fig 2), per-axis generalization, spectral-negative-control (Fig 4), cost/ROC (Fig 3). Pre-register before the wild eval.
+- **Weeks 6–12 (the flagship — most effort):** organism factory at scale + POC-4; **H3 train-controlled/test-wild** (Fig 2), per-axis generalization, spectral-negative-control (Fig 4), cost/ROC (Fig 3). Fix the split before the wild eval.
 - **Weeks 10–14:** **H4 trigger inversion** (Fig 5 — prioritized spotlight-maker); RL stage if it helps; ablations.
 - **Weeks 13–16:** **public hub audit** over the full ~40–60K corpus (C-Audit, Fig 8) with responsible-disclosure handling; corpus release prep (C-Corpus datasheet).
 - **Weeks 16–18:** H5 cross-model/VLM transfer (stretch, first to drop); writing, figures.
@@ -751,7 +751,7 @@ These run on a laptop and de-risk the single most dangerous failure mode (a sile
 ### B.13.6 Phase 4 — safety, the flagship (GPU; gated by POC-3)
 
 10. **POC-4 — organism factory + safety pilot.** Mint ~200 organisms on FLUX.2-klein-4B (benign + NSFW-injection + identity-cloning + backdoor `(trigger→payload)`); verify each exhibits its payload before use; train detection + payload-description; report ROC vs spectral baseline + payload-description accuracy. *Gate:* beats spectral ROC **and** produces usable payload descriptions → H3 in reach.
-11. **H3 flagship — train-controlled / test-wild.** Scale organisms; evaluate on the three wild tiers (benign / natural-malicious / crafted-by-others-config) with per-axis generalization breakdown; spectral-negative-control (reads semantics not spectra); cost/throughput vs run-the-model detector; adaptive-attacker arm. **Pre-register** organism set + wild split before running. *Deliverable:* Fig 2/3/4.
+11. **H3 flagship — train-controlled / test-wild.** Scale organisms; evaluate on the three wild tiers (benign / natural-malicious / crafted-by-others-config) with per-axis generalization breakdown; spectral-negative-control (reads semantics not spectra); cost/throughput vs run-the-model detector; adaptive-attacker arm. Fix the organism set + wild split before running. *Deliverable:* Fig 2/3/4.
 12. **H4 — trigger inversion** (prioritized spotlight-maker): recover trigger from weights; verify causally (generate-with-recovered-trigger → payload fires). *Deliverable:* Fig 5.
 
 ### B.13.7 Phase 5 — scale, audit, release

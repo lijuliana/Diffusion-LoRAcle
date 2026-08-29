@@ -46,7 +46,22 @@ every arm."
 
 **What we keep (validated, do not rebuild):**
 - `ditloracle/encoding/svd_encoder.py` + `tests/test_invariance.py` — the GL(r)/sign/degeneracy-aware
-  encoder. `poc0a_invariance` passes to 1e-9; gauge-fixing is essential and works.
+  encoder. `poc0a_invariance` passes to 1e-9.
+  **⚠ Corrected 2026-08-23 by the first real gate run:** (and note design doc §B.5.3 already mandated
+  the right feature — the implementation had drifted from it, so this is a regression we shipped, not a
+  gap in the design.) Measured refinement: sign-invariance is *not* the binding issue — the design
+  doc's own prescribed sign-invariant per-direction feature `uᵢvᵢᵀ` still only scores 0.53. What breaks
+  is **per-direction slot alignment** (direction 3 of adapter A vs direction 3 of adapter B), which
+  near-degenerate spectra destroy. Features that never index a direction — pooled subspace projectors,
+  or the whole-operator sketch — are the ones that work.
+  Original note: "gauge-fixing is essential" was the wrong
+  lesson from POC-0. ΔW = B·A is *already* exactly GL(r)-invariant, so invariance is free for any
+  function of the product; what canonicalization cannot buy is **conditioning**. Emitting individual
+  singular vectors uᵢ, vᵢ (what `OurSVDFeaturizer` did) is unstable — 47% of measured σ-gaps on real
+  adapters fall below 1e-2, where uᵢ is ill-conditioned by Davis–Kahan. The featurizer is now
+  `SubspaceProjFeaturizer` (basis-invariant subspace projectors), the only one to pass both gate axes.
+  See PROGRESS 2026-08-23. The encoder module and its invariance suite stand; the *feature read off it*
+  changed.
 - `ditloracle/formats/*` — the FLUX key-scheme parsers, fused qkv/mlp split, base-lineage verifier.
 - `ditloracle/probe/*` — spectral / raw-A·B / W2T-style baselines, recipe fingerprint, concept family.
 - `ditloracle/safety/organism_schema.py` + `scripts/poc1c_organism_gate.py` — the causal gate harness
@@ -69,8 +84,13 @@ must rest on:
 
 - **Detection-from-weights is now partly claimed.** `arXiv 2607.25750` ("Detecting CSAM Text-to-Image
   LoRAs From Weights") screens NSFW/CSAM adapters using the **top-left singular direction u₁** as a
-  fingerprint, detection-only, and reports it generalizes across base models. `arXiv 2602.15195` is now
-  titled "Detecting Backdoored LoRAs from Weights Alone" (still LLM-only, 20-dim spectral stats, binary).
+  fingerprint, detection-only, and reports it generalizes across base models (verified 2026-08-23:
+  Africa, Heine, Staes-Polet, Mai; diffusion LoRAs; robustness reported to rescaling).
+  `arXiv 2602.15195` is **"Weight space Detection of Backdoors in LoRA Adapters"** (Puertolas
+  Merenciano, Vasyagina, Zhu, Ferrando, Chaudhary) — title corrected 2026-08-23, we had it as
+  "Detecting Backdoored LoRAs from Weights Alone", which is not the paper's title. Still LLM-only
+  (Llama-3.2-3B / Qwen2.5-3B / Gemma-2-2B), five spectral stats of **the product ΔW** per Q/K/V/O →
+  20-dim signature → logistic regression, binary.
   **Consequence:** "we detect malicious adapters from weights" is no longer novel by itself. It is table
   stakes. We must beat these as baselines, not headline against them.
 - **The still-unclaimed white space (our spotlight):**
@@ -94,6 +114,13 @@ and whether it hides an NSFW/identity/backdoor payload with a recoverable trigge
 audit the live hub, and validated on adapters it was never trained on, without ever running the model.*
 Lead with **describe + trigger/payload + wild audit**; never lead with "detect from weights."
 
+**Title/abstract framing (added 2026-08-23, post full read of `2607.25750`):** theirs is a *probe*
+(u₁ + logistic regression on a fixed proxy axis); ours is a **meta-model with verbalization** (an LLM
+that reads weights and emits open language). Emphasize this in the title and abstract. Corollary: the
+paper must showcase at least one application a yes/no probe structurally cannot do — payload
+*description*, causal trigger *recovery* (H4-R2), and the open-vocabulary hub audit — or reviewers will
+ask "why not just a probe?" Detection numbers appear only as baseline comparisons, never as the pitch.
+
 ---
 
 ## 3. Compute and storage
@@ -102,7 +129,7 @@ Inventory as of today (details in memory `cloud-compute-inventory`):
 
 | Resource | What | State | Use |
 |---|---|---|---|
-| AWS `cs2881r-workhorse` | g6e.8xlarge, 1× L40S 48 GB, 300 GB EBS | **running since Aug 6 (~$4.5/hr, ~$650 so far)** | primary today; course-named — confirm before stopping |
+| AWS `cs2881r-workhorse` | g6e.8xlarge, 1× L40S 48 GB, 300 GB EBS | **stopped** (confirmed 2026-08-23; zero running AWS instances) | ready fallback; course-named — confirm before starting/stopping |
 | AWS `cs2881r-hardening` | g5.8xlarge, 1× A10G 24 GB | stopped | secondary / captioning |
 | AWS `nla-exp4-qwen` | g6e.8xlarge, 1× L40S 48 GB | stopped | can start (quota allows 2× g6e.8xlarge) |
 | AWS quota | 64 G-family vCPUs | — | up to 4× L40S concurrently (e.g. 1× g6e.12xlarge) |
@@ -123,8 +150,11 @@ and the L4×8 quota is ideal for parallel minting. AWS L40S is the ready fallbac
   with the A100s; no cross-project egress); minted + wild-audit corpora written via `fsspec`/`gcsfs`. The
   minted corpus is small (~0.5–1K × ~50–150 MB = well under 1 TB) — far cheaper than the 6–12 TB
   wild-harvest the old plan needed. A side benefit of the pivot.
-- **Cost flag:** the running g6e has cost ~$650 idle-ish. Decide whether it is doing coursework; if not,
-  stop it. Every figure below assumes L40S-class or the owned/credited cluster.
+- **Cost flag (updated 2026-08-23):** AWS is clean — zero running instances, both cs2881r boxes stopped.
+  The actual leak was GCP: five `g2-standard-8` L4 mint boxes left RUNNING and idle from Aug 14 to Aug 23
+  (~$0.85/hr each, ≈$760 burned for nothing) because nothing stopped them when the mint finished. **Mint
+  jobs must stop or delete their box on completion** — add that to the shard script, don't rely on a human
+  noticing. Every figure below assumes L40S-class or the owned/credited cluster.
 
 **GPU-hour budget (must fit ~2 months of available compute — the binding constraint).** 2× L40S run
 continuously for 2 months ≈ 2,880 GPU-hrs; 4× ≈ 5,760. The whole pipeline fits with margin, no
@@ -194,6 +224,14 @@ Each rung is a go/no-go. The order front-loads the two things that were never ac
     same-concept-across-rank retrieves above chance. **This is the premise test POC-1b could never make
     cleanly.** Pass → the signal is in the weights and we can read it → build the reader. Fail → stop,
     fall back to C-Corpus/C-Audit and reassess the encoder.
+  - **STATUS 2026-08-23: ✓ PASSED BOTH AXES** on 25 of the 47 organisms (the other 22 are 12 verify
+    failures + 9 never minted; fill run pending). `subspace_proj` concept mAP **1.000, p=0.0005**;
+    rank-invariance **0.957, p=0.0045**; rank-leak control at chance on both. Getting there required
+    replacing the singular-vector feature with subspace projectors (see §1). **The u₁ baseline
+    (`2607.25750`) is strong — 0.703 concept, 0.952 rank-invariance — and beats the old `our_svd` on
+    both axes**, so §8's "beat the u₁ detector" is a real bar, not a formality; do not plan around a
+    weak version of it (PROGRESS records how a bad sign convention understated it by ~2×). Re-confirm
+    at capability-corpus scale before any of this goes in a figure; n is 16 and 7 queries respectively.
   - Why this is safe to bet on: unlike wild data, here recipe/creator/spectrum are clamped, so a positive
     result is causal, and a negative result is decisive rather than confounded.
 
@@ -223,17 +261,33 @@ Each rung is a go/no-go. The order front-loads the two things that were never ac
   Train on organisms; evaluate on wild adapters never seen: wild-benign (false-positive rate), wild-
   malicious-natural (real hub NSFW/identity adapters, hand-verified), wild-malicious-crafted (attack
   recipes with settings we did not train on). Per-axis generalization breakdown; spectral-negative
-  control; cost/throughput vs run-the-model; adaptive-attacker arm. **Pre-register organism set + wild
-  split before running.** Figures 2/3/4.
+  control; cost/throughput vs run-the-model; adaptive-attacker arm. **Fix the organism set and wild split before running,** so the split is not chosen around the result. Figures 2/3/4.
 
-- **H4 — trigger inversion (bonus spotlight amplifier).** Recover trigger from weights; verify causally
+- **H4 — trigger inversion (spotlight, upgraded from bonus 2026-08-23).** `2607.25750` conspicuously
+  stops short of this: they show a trigger-hidden attribute is still *classifiable* (0.83 AUROC) but
+  never recover, verbalize, or causally verify the trigger itself. H4-R2 is therefore the sharpest
+  separator from the nearest paper and stays in the paper under time pressure (see droppable list).
+  Recover trigger from weights; verify causally
   (generate with recovered trigger → payload fires). Report at whatever ladder rung we reach. Figure 6.
+  **Ladder** (frontier-calibrated 2026-08-17; evidence in `notes/lit/trigger-inversion-notes.md`):
+  - R1 (safe floor): trigger-*presence* detection — already part of the safety hypothesis; H4 claims start at R2.
+  - **R2 (primary endpoint): causal surrogate recovery** — the reader emits candidate trigger text from
+    weights alone; success = rendering it fires the payload above an ASR threshold on held-out organisms.
+    This is the field-standard bar (Neural Cleanse/PICCOLO/DBS all score inverted triggers by induced
+    behavior, not string match).
+  - R3 (report-only): token/semantic overlap with the ground-truth trigger.
+  - R4 (stretch, frontier-unsolved): exact-string recovery — TDC-2023 recall was ~random even with high
+    surrogate ASR; report if achieved, never promised.
+  Scope: fixed-token text triggers only; semantic-predicate/dynamic (CLIBE-class) triggers have no unique
+  string to invert — future work (latent-condition inversion; lit-notes gap #3). Novelty vs neighbors is
+  covered in §2 above (verbalization from weights — detection-only and execution-based work doesn't attempt it).
 
 - **C-Audit + C-Corpus — the deployment + dataset artifacts.** Run the reader over the harvested wild
   corpus (unlabeled) for the first hub-scale execution-free safety scan; release the minted corpus +
   ground-truth labels + encoder. Both are contributions even if a later H slips.
 
-**Droppable under time pressure, in order:** H5 (cross-model/VLM), then H4-exact-string, then the
+**Droppable under time pressure, in order:** H5 (cross-model/VLM), then H4-R4/R3 (exact-string, overlap
+metrics — R2 causal surrogate stays), then the
 adaptive-attacker arm. The paper is H1+H2+H3+corpus+audit and stands without any of these.
 
 ---
@@ -271,14 +325,30 @@ truth — so the reader must read concept across recipes and we can show it does
 under 1 TB, still cheaper than the old 6–12 TB wild harvest). Every organism carries a validated
 `OrganismRecord` and a "payload fires" check before admission.
 
-**⚠ Open design item — concept diversity (do before POC-C).** The taxonomy currently enumerates 22
-concepts, so `--replicates` multiplies organisms *within* a fixed concept set; 5K organisms over 14
-training concepts would be ~357 near-duplicates each. An open-language reader that generalizes to
-unseen families needs concept diversity in the **hundreds to low thousands**, which means making the
-taxonomy **generative** (a compositional style × subject × medium × palette grid, or a sampled concept
-vocabulary) rather than a hand-written list. The counterfactual machinery, splits, and audit all carry
-over unchanged; only `taxonomy.CONCEPTS` becomes a generator. POC-M does not need this (the gate needs
-depth per concept, not breadth), so it is scheduled between POC-M and POC-C.
+**✓ RESOLVED 2026-08-23 — concept diversity is now generative.** `taxonomy` composes three head axes
+(20 styles / 25 subjects / 12 personas, each carrying a family) against two modifier axes (10 media,
+8 palettes), seeded and interleaved on a fixed head cycle: **capacity 4,582 concepts** (the curated 22
+plus 4,560 generated). The scale knob is a *parameter*, not an env var — `generate_concepts(n)` →
+`build_plan(n_concepts=…)` → `mint_corpus.py --n-concepts` — so a plan records the concept count it was
+built at. Three properties make it safe to grow a corpus incrementally:
+- **The curated 22 are a prefix** and `generate_concepts(n1)` prefixes `generate_concepts(n2)`, so
+  scaling up appends and never renames an organism that has already been minted. The default output is
+  byte-identical to the pre-change plan (verified by diffing `build_plan` across both bases ×
+  replicates {1,2,3,6}), so the in-flight POC-M gate is untouched and `mint_spec.py` has a zero diff.
+- **Trigger collisions are impossible by construction**: generated stems carry two digits, every
+  reserved surface (curated + safety + gate triggers, payload nouns) is digit-free and ≥3 chars, so no
+  substring can alias. Exhaustively checked: 0 overlaps over all 4,560, and a 200-concept plan leaks
+  zero payload/trigger surfaces into benign image sets (the PROGRESS balloon-vs-payload bug is guarded
+  semantically, not just by name).
+- **Held-out families still declared up front** — one new held-out family per group; at n=600 that is
+  8 held-out families and a ~32% test fraction spanning all three benign kinds.
+Confound audit holds at scale: `build_plan` returns **0 errors at n = 22 → 2,000** (up to 4,059
+organisms), recipe⊥concept leak is exactly 0.0 whenever `replicates % 6 == 0` and otherwise
+finite-sample bias with p = 1.0 ≫ `LEAK_ALPHA`, *decreasing* with breadth.
+**One deliberate deferral:** capability seeds (`BASE_SEED + 1000·ci + rep`) collide with the safety
+block at `n_concepts ≥ 51` for ~6 organisms. Harmless today (different datasets ⇒ different weights)
+and nothing validates seed uniqueness, but re-basing the formula would move every existing capability
+seed — **decide before POC-C**, not during it.
 
 **Confound audit (enforced in code).** `corpus_plan.audit_confounds` measures, before any GPU-hour,
 whether recipe predicts concept or the malicious/benign label, scored against a permutation null, and
@@ -314,7 +384,9 @@ Concrete, all in the committed code:
 ## 8. Evaluation and figures (updated for the new landscape)
 
 Baselines to beat (all reported next to every headline number): spectral-stat detector (`2602.15195`),
-**the u₁ singular-direction CSAM detector (`2607.25750`)**, W2T-style encoder (`2603.15990`), raw-A·B,
+**the u₁+logreg singular-direction CSAM detector (`2607.25750`)** — beat it in Figs 3/4, and
+specifically on the matched-spectra control, where a single direction can flag but structurally cannot
+*describe* — W2T-style encoder (`2603.15990`), raw-A·B,
 nearest-neighbor-caption (memorization ceiling), metadata/creator-tag, and the run-the-model
 caption/NSFW upper bound with its cost.
 
@@ -327,6 +399,10 @@ caption/NSFW upper bound with its cost.
 - **Fig 5:** H2 hard retrieval vs nearest-neighbor-caption and metadata.
 - **Fig 5b:** module localization (where the signal lives).
 - **Fig 6:** trigger ladder (H4), honest about where exact recovery is underdetermined.
+- **Robustness sweep (table stakes, per `2607.25750`):** adopt the *shape* of their evasion protocol
+  (not their method) — additive weight noise at several σ, global rescaling, fp16 round-trip, 8-/4-bit
+  quantization, norm-equalization — and report reader accuracy under each. Their sweep set the rigor
+  bar reviewers will now expect; a small version on the safety-detection arm suffices.
 - **Fig 8:** hub audit at scale (the deployment figure).
 
 ---
@@ -363,7 +439,7 @@ corpus scale is the knob that keeps compute in budget.
   gate. **Decision point.**
 - Weeks 2–4: capability corpus + closed-set reader (POC-C). Safety families expand in parallel (POC-S).
 - Weeks 4–7: free-text + hard retrieval (POC-T); safety pilot ROC.
-- Weeks 7–12: H3 flagship (test-wild), pre-registered; Figures 2/3/4.
+- Weeks 7–12: H3 flagship (test-wild), Figures 2/3/4.
 - Weeks 12–15: H4 trigger inversion; hub audit; corpus release prep.
 - Weeks 15–18: ablations, writing, figures. H5 if time.
 
@@ -371,5 +447,13 @@ corpus scale is the knob that keeps compute in budget.
 engine, the corpus bucket, and the promoted causal gate are built; the 47-organism POC-M gate mint
 launched 2026-08-13 on FLUX.2-klein. **Still open (needs you):**
 1. Decide the fate of the running g6e (`cs2881r-workhorse`) — is it doing coursework, or stop it?
-2. HuggingFace token (FLUX.1-dev is gated — the reason the pilot runs on klein) and CivitAI API key for
-   the wild-audit slice — put them in a gitignored `notes/.env` (never committed).
+2. ~~HuggingFace token~~ **DONE 2026-08-24.** Token supplied and verified: user `juli-li`, fine-grained,
+   and the FLUX.1-dev licence is accepted — a ranged GET on a gated transformer shard returns HTTP 206,
+   so the weights are genuinely fetchable, not merely the repo metadata. Stored in gitignored
+   `notes/.env` (chmod 600) and pushed to the mint fleet, which had been downloading unauthenticated
+   (LoRAcle's own notes measure a ~15x throughput penalty for that).
+   **Sequencing decision:** the workshop corpus stays on **klein**. 250+ adapters are already minted
+   there, the deadline is under four days, and FLUX.1-dev is a 12B model that costs materially more per
+   organism. FLUX.1-dev is now unblocked for the ICLR headline corpus and the ~42K-adapter wild audit,
+   which is where it was always needed.
+   Still open: CivitAI API key for the wild-audit slice.

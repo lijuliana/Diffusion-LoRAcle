@@ -1,4 +1,4 @@
-\begin{thebibliography}{16}
+\begin{thebibliography}{19}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -10,6 +10,12 @@
 David~Demitri Africa, Cate Heine, Nadine Staes-Polet, and Kimberly Mai.
 \newblock Detecting csam text-to-image loras from weights.
 \newblock \emph{arXiv preprint arXiv:2607.25750}, 2026.
+
+\bibitem[{Black Forest Labs}(2026)]{bfl2026flux2klein}
+{Black Forest Labs}.
+\newblock {FLUX.2-klein-4B}.
+\newblock Model weights and card,
+  \url{https://huggingface.co/black-forest-labs/FLUX.2-klein-4B}, 2026.
 
 \bibitem[Bossan et~al.(2026)Bossan, Paul, Tietz, and
   Rasul]{bossan2026beyondlora}
@@ -92,6 +98,11 @@ Derek Lim, Joshua Robinson, Lingxiao Zhao, Tess Smidt, Suvrit Sra, Haggai
   learning.
 \newblock \emph{arXiv preprint arXiv:2202.13013}, 2022.
 
+\bibitem[Ostris(2026)]{ostris2026aitoolkit}
+Ostris.
+\newblock ai-toolkit: a training suite for diffusion models.
+\newblock \url{https://github.com/ostris/ai-toolkit}, 2026.
+
 \bibitem[Peebles and Xie(2023)]{peebles2023dit}
 William Peebles and Saining Xie.
 \newblock Scalable diffusion models with transformers.
@@ -119,6 +130,13 @@ Per-{\AA}ke Wedin.
 \newblock \emph{BIT Numerical Mathematics}, 12\penalty0 (1):\penalty0 99--111,
   1972.
 \newblock \doi{10.1007/BF01932678}.
+
+\bibitem[Yang et~al.(2025)Yang, Li, Yang, Zhang, Hui, Zheng, Yu,
+  et~al.]{yang2025qwen3}
+An~Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo~Zheng, Bowen
+  Yu, et~al.
+\newblock Qwen3 technical report.
+\newblock \emph{arXiv preprint arXiv:2505.09388}, 2025.
 
 \bibitem[Zheng et~al.(2026)Zheng, Hu, Zhang, Cheng, and Shen]{zheng2026fedgsa}
 Lele Zheng, Ruijie Hu, Tao Zhang, Ke~Cheng, and Yulong Shen.

@@ -23,11 +23,25 @@ from ditloracle.formats.base_lineage import BaseClass, verify_base_lineage
 # strata a caller may request
 STRICT = "verified"                      # flux1_dev_verified only (the gate stratum)
 PERMISSIVE = "verified_plus_unverified"  # + flux_family_unverified (the reader-training stratum)
+ALL = "all"                              # keep everything, still TAGGED (hub audit; never a training set)
 
 _STRATUM_CLASSES = {
     STRICT: {BaseClass.FLUX1_DEV_VERIFIED},
     PERMISSIVE: {BaseClass.FLUX1_DEV_VERIFIED, BaseClass.FLUX_FAMILY_UNVERIFIED},
+    ALL: None,                           # None = no filtering
 }
+
+
+def in_stratum(base_class: str, stratum: str = STRICT) -> bool:
+    """Is a record's `_base_class` inside `stratum`?
+
+    The single definition of the strata, so the download path, the probe/training path and the audit
+    cannot drift apart. Off-base merges and non-FLUX are outside every stratum except ALL.
+    """
+    if stratum not in _STRATUM_CLASSES:
+        raise ValueError(f"stratum must be one of {list(_STRATUM_CLASSES)}, got {stratum!r}")
+    keep = _STRATUM_CLASSES[stratum]
+    return True if keep is None else base_class in {c.value for c in keep}
 
 
 def _local_path(rec: dict) -> str | None:
@@ -55,14 +69,13 @@ def stratify_manifest(manifest_path: str, stratum: str = STRICT,
     """
     if stratum not in _STRATUM_CLASSES:
         raise ValueError(f"stratum must be one of {list(_STRATUM_CLASSES)}, got {stratum!r}")
-    keep_classes = {c.value for c in _STRATUM_CLASSES[stratum]}
     records = json.loads(Path(manifest_path).read_text())
 
     kept, dropped, breakdown = [], [], Counter()
     for rec in records:
         c = classify_record(rec)
         breakdown[c["_base_class"]] += 1
-        (kept if c["_base_class"] in keep_classes else dropped).append(c)
+        (kept if in_stratum(c["_base_class"], stratum) else dropped).append(c)
 
     if out_path:
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)

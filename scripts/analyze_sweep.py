@@ -52,7 +52,8 @@ def pair(name: str, known: set = frozenset()) -> str | None:
     if not m:
         return None
     ep = m.group(1)
-    for cand in (f"e{ep}_CTRL", f"ps_CONTROL_shuffled_e{ep}", f"CONTROL_shuffled_e{ep}"):
+    for cand in (f"e{ep}_CTRL", f"ps_CONTROL_shuffled_e{ep}", f"CONTROL_shuffled_e{ep}",
+                 name.replace("_real", "_CTRL")):
         if not known or cand in known:
             return cand
     return None

@@ -40,6 +40,8 @@ from ditloracle.probe.featurizers import (
     ProductSketchFeaturizer,
     RankLeakFeaturizer,
     SpectralStatFeaturizer,
+    SubspaceProjFeaturizer,
+    U1LogRegFeaturizer,
     build_fixed_schema,
 )
 from ditloracle.probe.significance import bootstrap_ci, permutation_pvalue
@@ -140,7 +142,16 @@ def run_axis(recs, loras, axis: str, seed: int = 0) -> dict:
     dims = {m: dims[m] for m in modules}
     fzs = {
         "spectral_stat": SpectralStatFeaturizer(modules, dims, TOP_K),
+        # nearest competing paper (2607.25750): u₁ per module. Detection-only there, but scored on the
+        # SAME retrieval axis here so the lineup is like-for-like (its detector head is probe.detection).
+        "u1_logreg": U1LogRegFeaturizer(modules, dims, TOP_K),
         "product_sketch": ProductSketchFeaturizer(modules, dims, TOP_K),
+        # THE ENCODER THE GATE IS SCORED ON since 2026-08-23. `our_svd` is kept below as the ablation
+        # that motivated the switch, not as the headline: on real organisms its singular-VECTOR
+        # components were noise (concept 0.489, below the 0.624 of its own spectrum alone), because
+        # ~47% of measured σ-gaps sit under 1e-2 where individual uᵢ are ill-conditioned. Projectors
+        # are invariant to rotation inside the retained subspace, so they stay defined where uᵢ do not.
+        "subspace_proj": SubspaceProjFeaturizer(modules, dims, TOP_K),
         "our_svd": OurSVDFeaturizer(modules, dims, TOP_K),
         "rank_leak_CONTROL": RankLeakFeaturizer(modules, dims, TOP_K),
     }
@@ -174,6 +185,15 @@ def _unevaluable(f: dict) -> str | None:
     return None
 
 
+# The featurizer the gate verdict is scored on. Changed from "our_svd" to "subspace_proj" on
+# 2026-08-23 after the first real run: emitting individual singular vectors was measured to be worse
+# than emitting nothing but the spectrum, because ~47% of adjacent σ-gaps on real adapters fall below
+# 1e-2 where uᵢ is ill-conditioned (Davis-Kahan). Projectors onto the retained subspace are invariant
+# to rotation inside it, and are the only featurizer that clears p<0.01 on BOTH axes. `our_svd` is
+# still computed and reported so the ablation stays visible in every result file.
+PRIMARY = "subspace_proj"
+
+
 def verdict(concept_axis: dict, rank_axis: dict) -> list[str]:
     v = []
     def sig(a, name):
@@ -181,7 +201,7 @@ def verdict(concept_axis: dict, rank_axis: dict) -> list[str]:
         p = f.get("p_value")
         return f, (p is not None and p <= SIG_P)
 
-    our_c, our_c_sig = sig(concept_axis, "our_svd")
+    our_c, our_c_sig = sig(concept_axis, PRIMARY)
     leak_c, leak_c_sig = sig(concept_axis, "rank_leak_CONTROL")
 
     if "skipped" in concept_axis:
@@ -191,31 +211,31 @@ def verdict(concept_axis: dict, rank_axis: dict) -> list[str]:
                  f"the premise; the organism set is malformed. Fix and re-run before concluding.")
     else:
         if our_c_sig and not leak_c_sig:
-            v.append(f"✓ CONCEPT-IN-WEIGHTS: our_svd retrieves concept under a CLAMPED recipe "
+            v.append(f"✓ CONCEPT-IN-WEIGHTS: {PRIMARY} retrieves concept under a CLAMPED recipe "
                      f"(mAP={our_c.get('observed')}, p={our_c.get('p_value')}). "
                      f"NOTE: on a clamped-recipe axis the rank/recipe control is DEGENERATE (rank and "
                      f"module set are constant by construction), so its being at chance is guaranteed "
                      f"and carries no evidential weight. The informative recipe controls live on the "
                      f"capability corpus, where recipe actually varies.")
         elif our_c_sig and leak_c_sig:
-            v.append(f"⚠ our_svd is above chance (p={our_c.get('p_value')}) BUT so is the rank/recipe "
+            v.append(f"⚠ {PRIMARY} is above chance (p={our_c.get('p_value')}) BUT so is the rank/recipe "
                      f"control (p={leak_c.get('p_value')}) — the matched set isn't as clamped as "
                      f"intended; inspect the recipe cells before trusting.")
         else:
-            v.append(f"✗ our_svd NOT above chance on the clamped-recipe concept axis "
+            v.append(f"✗ {PRIMARY} NOT above chance on the clamped-recipe concept axis "
                      f"(p={our_c.get('p_value')}, n_queries={our_c.get('n_queries')}). Either concept "
                      f"is not in the directions, or the organism set is too small/easy — reassess.")
 
     if "skipped" in rank_axis:
         v.append(f"rank-invariance axis skipped: {rank_axis['skipped']}")
     else:
-        our_r, our_r_sig = sig(rank_axis, "our_svd")
+        our_r, our_r_sig = sig(rank_axis, PRIMARY)
         leak_r, leak_r_sig = sig(rank_axis, "rank_leak_CONTROL")
         if our_r_sig and not leak_r_sig:
-            v.append(f"✓ RANK-INVARIANT: our_svd retrieves the same concept ACROSS ranks "
+            v.append(f"✓ RANK-INVARIANT: {PRIMARY} retrieves the same concept ACROSS ranks "
                      f"(p={our_r.get('p_value')}) while the rank control cannot (p={leak_r.get('p_value')}).")
         else:
-            v.append(f"✗ rank-invariance not shown (our_svd p={our_r.get('p_value')}, "
+            v.append(f"✗ rank-invariance not shown ({PRIMARY} p={our_r.get('p_value')}, "
                      f"rank_leak p={leak_r.get('p_value')}).")
     return v
 

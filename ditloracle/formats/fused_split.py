@@ -12,6 +12,14 @@ Verified real shapes (d_model = 3072, rank r):
 
 Output-fused → split B's ROWS (shared A). Input-fused → split A's COLUMNS (shared B).
 mlp width is derived from the actual tensor shape, not hard-coded, so it survives FLUX variants.
+
+The name tables below cover BOTH vocabularies, because the split has to happen on every path:
+  * the canonical FLUX.1 names `flux_lora.parse_keys` produces (`attn.qkv_fused_img`, ...);
+  * the RAW key stems `safetensors_io.raw_stem_modules` falls back to for schemes that parser does
+    not know — FLUX.2-klein trains `double_blocks.N.img_attn.qkv` (3-fused) and
+    `single_blocks.N.linear1` (qkv+mlp), so the whole minted corpus arrives on this path.
+Every rule is SHAPE-CHECKED (`fused_spec`): a name that looks fused but whose widths do not divide is
+passed through rather than corrupted.
 """
 
 from __future__ import annotations
@@ -21,39 +29,62 @@ import torch
 Tensor = torch.Tensor
 D_MODEL_FLUX = 3072
 
+# Sub-names (the part after "{block}.{idx}.") that pack several projections into one matrix.
+_QKV_IMG = frozenset({"attn.qkv_fused_img",      # canonical FLUX.1 (kohya img_attn_qkv)
+                      "img_attn.qkv",             # raw BFL/klein stem
+                      "attn.qkv", "attn.to_qkv"})  # generic single-stream
+_QKV_TXT = frozenset({"attn.qkv_fused_txt", "txt_attn.qkv"})
+_QKV_MLP = frozenset({"proj_fused_qkv_mlp",       # canonical FLUX.1 single-block linear1
+                      "linear1",                   # raw BFL/klein single-block stem
+                      "attn.to_qkv_mlp_proj"})     # FLUX.2-klein diffusers name
+_IN_FUSED = frozenset({"proj_out", "linear2"})     # single-block linear2: attn+mlp on the INPUT side
+
+
+def fused_spec(canonical_name: str, d_out: int, d_in: int,
+               d_model: int = D_MODEL_FLUX) -> tuple[str, list[tuple[str, int]]] | None:
+    """The split plan for a module from its NAME + SHAPE alone, or None if it is not fused.
+
+    Returns ("rows"|"cols", [(subname, width), ...]). Shape-only (no tensors), so a cheap key-scan
+    can predict exactly what `split_fused` will produce — that is what keeps the schema scan and the
+    loader from disagreeing (a mismatch silently empties `keep_modules`).
+    """
+    prefix, sub = _split_prefix(canonical_name)
+    if sub in _QKV_IMG and d_out == 3 * d_model:
+        return "rows", [(f"{prefix}.attn.to_q", d_model), (f"{prefix}.attn.to_k", d_model),
+                        (f"{prefix}.attn.to_v", d_model)]
+    if sub in _QKV_TXT and d_out == 3 * d_model:
+        return "rows", [(f"{prefix}.attn.add_q", d_model), (f"{prefix}.attn.add_k", d_model),
+                        (f"{prefix}.attn.add_v", d_model)]
+    if sub in _QKV_MLP and d_out > 3 * d_model:
+        return "rows", [(f"{prefix}.attn.to_q", d_model), (f"{prefix}.attn.to_k", d_model),
+                        (f"{prefix}.attn.to_v", d_model), (f"{prefix}.proj_mlp", d_out - 3 * d_model)]
+    if sub in _IN_FUSED and d_in > d_model:
+        return "cols", [(f"{prefix}.attn_out", d_model), (f"{prefix}.mlp_out", d_in - d_model)]
+    return None
+
+
+def is_fused_shape(canonical_name: str, d_out: int, d_in: int,
+                   d_model: int = D_MODEL_FLUX) -> bool:
+    """Would this module still need splitting? The guard featurizers use to refuse fused input."""
+    return fused_spec(canonical_name, d_out, d_in, d_model) is not None
+
 
 def split_fused(canonical_name: str, B: Tensor, A: Tensor, d_model: int = D_MODEL_FLUX) -> list[tuple]:
     """Return [(subname, B_sub, A_sub), ...]. Non-fused modules return a single passthrough entry.
 
-    `canonical_name` is the flux_lora.py canonical name (e.g. "double.0.attn.qkv_fused_img",
-    "single.3.proj_fused_qkv_mlp", "single.3.proj_out"). Sub-names reuse the diffusers-style suffixes
-    so fused and unfused corpora share one module vocabulary.
+    `canonical_name` is a flux_lora.py canonical name (e.g. "double.0.attn.qkv_fused_img",
+    "single.3.proj_fused_qkv_mlp") or a raw key stem ("double_blocks.0.img_attn.qkv"). Sub-names
+    reuse the diffusers-style suffixes so fused and unfused corpora share one module vocabulary.
     """
     d_out, r = B.shape
     r2, d_in = A.shape
     assert r == r2, f"rank mismatch for {canonical_name}: B has r={r}, A has r={r2}"
 
-    prefix, sub = _split_prefix(canonical_name)
-
-    # ---- output-fused: split B rows, share A ----
-    if sub == "attn.qkv_fused_img":
-        return _split_b_rows(prefix, B, A, [("attn.to_q", d_model), ("attn.to_k", d_model), ("attn.to_v", d_model)])
-    if sub == "attn.qkv_fused_txt":
-        return _split_b_rows(prefix, B, A, [("attn.add_q", d_model), ("attn.add_k", d_model), ("attn.add_v", d_model)])
-    if sub == "proj_fused_qkv_mlp":   # single-block linear1
-        mlp = d_out - 3 * d_model
-        if mlp <= 0:
-            return [(canonical_name, B, A)]  # unexpected shape → don't corrupt; pass through
-        return _split_b_rows(prefix, B, A,
-                             [("attn.to_q", d_model), ("attn.to_k", d_model), ("attn.to_v", d_model), ("proj_mlp", mlp)])
-
-    # ---- input-fused: split A columns, share B (single-block linear2 / proj_out) ----
-    if sub == "proj_out" and d_in > d_model:
-        mlp = d_in - d_model
-        return _split_a_cols(prefix, B, A, [("attn_out", d_model), ("mlp_out", mlp)])
-
-    # ---- not fused ----
-    return [(canonical_name, B, A)]
+    spec = fused_spec(canonical_name, d_out, d_in, d_model)
+    if spec is None:
+        return [(canonical_name, B, A)]
+    axis, parts = spec
+    return _split_b_rows(parts, B, A) if axis == "rows" else _split_a_cols(parts, B, A)
 
 
 def fused_subnames(canonical_name: str) -> list[str]:
@@ -83,19 +114,19 @@ def _split_prefix(name: str) -> tuple[str, str]:
     return ".".join(parts[:2]), ".".join(parts[2:])
 
 
-def _split_b_rows(prefix: str, B: Tensor, A: Tensor, spec: list[tuple[str, int]]) -> list[tuple]:
+def _split_b_rows(parts: list[tuple[str, int]], B: Tensor, A: Tensor) -> list[tuple]:
     out, off = [], 0
-    for sub, width in spec:
-        out.append((f"{prefix}.{sub}", B[off:off + width, :].contiguous(), A))
+    for name, width in parts:
+        out.append((name, B[off:off + width, :].contiguous(), A))
         off += width
-    assert off == B.shape[0], f"row split {off} != {B.shape[0]} for {prefix}"
+    assert off == B.shape[0], f"row split {off} != {B.shape[0]} for {parts[0][0]}"
     return out
 
 
-def _split_a_cols(prefix: str, B: Tensor, A: Tensor, spec: list[tuple[str, int]]) -> list[tuple]:
+def _split_a_cols(parts: list[tuple[str, int]], B: Tensor, A: Tensor) -> list[tuple]:
     out, off = [], 0
-    for sub, width in spec:
-        out.append((f"{prefix}.{sub}", B, A[:, off:off + width].contiguous()))
+    for name, width in parts:
+        out.append((name, B, A[:, off:off + width].contiguous()))
         off += width
-    assert off == A.shape[1], f"col split {off} != {A.shape[1]} for {prefix}"
+    assert off == A.shape[1], f"col split {off} != {A.shape[1]} for {parts[0][0]}"
     return out

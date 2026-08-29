@@ -70,11 +70,16 @@ def _recipe_assignment(concept_index: int, replicates: int) -> list[tuple]:
     return out[:replicates]
 
 
-def _capability_records(base_model: str, replicates: int) -> list[OrganismRecord]:
-    """One record per (concept, replicate); recipe drawn per-concept so recipe ⊥ concept."""
+def _capability_records(base_model: str, replicates: int,
+                        concept_set: tuple | list | None = None) -> list[OrganismRecord]:
+    """One record per (concept, replicate); recipe drawn per-concept so recipe ⊥ concept.
+
+    `concept_set` defaults to the curated `taxonomy.CONCEPTS`; pass a generated set (see
+    `taxonomy.generate_concepts`) to scale concept BREADTH instead of only replicate depth.
+    """
     msets = module_sets_for(base_model)
     recs: list[OrganismRecord] = []
-    for ci, c in enumerate(taxonomy.CONCEPTS):
+    for ci, c in enumerate(taxonomy.CONCEPTS if concept_set is None else concept_set):
         for rep, (rank, alpha, mkey, trainer) in enumerate(_recipe_assignment(ci, replicates)):
             recs.append(OrganismRecord(
                 organism_id=f"cap__{c.key}__rep{rep}_r{rank}_{mkey}",
@@ -233,7 +238,8 @@ def _safety_records(base_model: str, replicates: int = 1) -> list[OrganismRecord
     return recs
 
 
-def build_plan(base_model: str = "FLUX.1-dev", replicates: int = 2) -> dict:
+def build_plan(base_model: str = "FLUX.1-dev", replicates: int = 2,
+               n_concepts: int | None = None) -> dict:
     """Assemble the full mint-first corpus plan and validate every counterfactual matched set.
 
     Sections:
@@ -242,8 +248,14 @@ def build_plan(base_model: str = "FLUX.1-dev", replicates: int = 2) -> dict:
       - matched_sets   : the POC-M causal-gate counterfactuals (concept / rank_alpha / trigger)
     Returns a dict with counts, split tallies, the organism manifest, matched-set ids, and any errors.
     A non-empty "errors" means a malformed counterfactual — fix before minting.
+
+    `n_concepts` is the corpus's BREADTH knob (PLAN.md §6). None = the curated 22, which is what
+    POC-M mints (it needs depth per concept, not breadth). POC-C passes hundreds, which expands the
+    taxonomy compositionally; the curated concepts stay the first 22, so the gate's eight named
+    concepts and every already-minted organism_id are unaffected. `replicates` is orthogonal depth.
     """
-    cap = _capability_records(base_model, replicates)
+    taxo = taxonomy.resolve_concepts(n_concepts)
+    cap = _capability_records(base_model, replicates, taxo)
     safety = _safety_records(base_model)
 
     # the causal-gate matched sets (reuse the validated mint_spec builders)
@@ -280,11 +292,14 @@ def build_plan(base_model: str = "FLUX.1-dev", replicates: int = 2) -> dict:
         dupes = sorted({i for i in ids if ids.count(i) > 1})
         errors.append(f"duplicate organism_ids: {dupes[:5]}")
 
-    # gate organisms must not touch held-out families, or the generalization split is meaningless
-    fam_of = {c.key: c.family for c in taxonomy.CONCEPTS}
+    # gate organisms must not touch held-out families, or the generalization split is meaningless.
+    # Checked against the ACTIVE set's held-out families, which grows with n_concepts — a gate
+    # concept that is fine at n=22 must stay fine when the generated families are added.
+    fam_of = {c.key: c.family for c in taxo}
+    held_out = taxonomy.held_out_families(taxo)
     leaked = sorted({fam_of[r.primary_concept] for s in matched for r in s
                      if r.primary_concept in fam_of
-                     and fam_of[r.primary_concept] in taxonomy.HELD_OUT_FAMILIES})
+                     and fam_of[r.primary_concept] in held_out})
     if leaked:
         errors.append(f"gate set uses HELD-OUT families {leaked} — they would no longer be held out")
 
@@ -306,10 +321,11 @@ def build_plan(base_model: str = "FLUX.1-dev", replicates: int = 2) -> dict:
         "replicates": replicates,
         "n_organisms": len(all_recs),
         "n_capability": len(cap),
+        "n_concepts": len(taxo),
         "n_safety": len(safety),
         "n_matched_sets": len(matched),
         "split_tally": dict(split_tally),
-        "held_out_families": sorted(taxonomy.HELD_OUT_FAMILIES),
+        "held_out_families": sorted(held_out),
         "confound_audit": audit,
         "matched_sets": [[r.organism_id for r in s] for s in matched],
         "organisms": manifest,
@@ -317,8 +333,9 @@ def build_plan(base_model: str = "FLUX.1-dev", replicates: int = 2) -> dict:
     }
 
 
-def write_plan(out_path: str, base_model: str = "FLUX.1-dev", replicates: int = 2) -> dict:
-    plan = build_plan(base_model, replicates)
+def write_plan(out_path: str, base_model: str = "FLUX.1-dev", replicates: int = 2,
+               n_concepts: int | None = None) -> dict:
+    plan = build_plan(base_model, replicates, n_concepts)
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     Path(out_path).write_text(json.dumps(plan, indent=2))
     return plan

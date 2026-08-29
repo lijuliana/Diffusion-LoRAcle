@@ -42,6 +42,7 @@ from ditloracle.probe.featurizers import (
     RankLeakFeaturizer,
     RawABFeaturizer,
     SpectralStatFeaturizer,
+    U1LogRegFeaturizer,
     W2TFeaturizer,
     build_fixed_schema,
 )
@@ -311,6 +312,9 @@ def main():
     featurizers = {
         "spectral_stat": SpectralStatFeaturizer(modules, dims, TOP_K),
         "norm_only": NormOnlyFeaturizer(modules, dims, TOP_K),   # A2: ΔW-norm baseline (must be beaten)
+        # nearest competing paper (2607.25750): top-left singular direction per module. Detection-only
+        # in the paper; its ROC head is probe.detection, this entry puts it in the retrieval lineup too.
+        "u1_logreg": U1LogRegFeaturizer(modules, dims, TOP_K),
         "raw_ab": RawABFeaturizer(modules, dims, TOP_K),
         "w2t_svd": W2TFeaturizer(modules, dims, TOP_K),
         # principled GL-invariant baseline (Putterman GL-net's endorsed product feature): a fixed
@@ -427,7 +431,7 @@ def main():
         P_SIG = 0.01          # a featurizer is "above chance" iff permutation p ≤ this
         P_LEAK = 0.01         # a nuisance control "leaks" iff it is itself above chance at this p
         P_BEAT = 0.95         # our_svd "beats" a baseline iff paired-bootstrap P(Δ>0) ≥ this
-        BASELINES = ("spectral_stat", "raw_ab", "w2t_svd", "product_sketch", "norm_only")
+        BASELINES = ("spectral_stat", "raw_ab", "w2t_svd", "product_sketch", "norm_only", "u1_logreg")
         # pure-nuisance leakage referee (NOT norm-inclusive: ΔW-norm is partly real signal — see A2).
         REFEREE = ("rank_leak_CONTROL", "recipe_fp_nonorm_CONTROL")
 

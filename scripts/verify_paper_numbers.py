@@ -43,26 +43,37 @@ def main():
 
     S6 = "results/sweep6"
     e12 = get(f"{S6}/e12_real.json", "results", "heldout_adapter", default={})
+    # The best arm is the largest training budget, currently 25 epochs. Keep this pointed at the arm
+    # the abstract actually quotes, or the check passes against a number the paper no longer makes.
+    best = get(f"{S6}/e25_real.json", "results", "heldout_adapter", default={})
+    bestc = get(f"{S6}/e25_CTRL.json", "results", "heldout_adapter", default={})
+    cold = get("results/sweep7/cold_r16_e12_real.json", "results", "heldout_adapter", default={})
     e12c = get(f"{S6}/e12_CTRL.json", "results", "heldout_adapter", default={})
     e6 = get(f"{S6}/e6_real.json", "results", "heldout_adapter", default={})
     rep = get(f"{S6}/e12_r32_real.json", "results", "heldout_adapter", default={})
 
     check("headline held-out accuracy",
-          find(r"unseen adapter in (\d+\.\d+)% of cases") or find(r"\*\*36/105 \((\d+\.\d+)%\)"),
+          find(r"unseen adapter in (\d+\.\d+)% of cases"),
+          round(best.get("reader_concept_accuracy", 0) * 100, 1), "e25_real.json")
+    check("headline matched control", 0.0,
+          bestc.get("reader_concept_accuracy"), "e25_CTRL.json")
+    check("12-epoch accuracy", find(r"(\d+\.\d+)% at twelve"),
           round(e12.get("reader_concept_accuracy", 0) * 100, 1), "e12_real.json")
-    check("matched control accuracy", 0.0,
+    check("12-epoch matched control", 0.0,
           e12c.get("reader_concept_accuracy"), "e12_CTRL.json")
+    check("cold rank-16 accuracy", find(r"reaches (\d+\.\d+)% at twelve epochs against its own"),
+          round(cold.get("reader_concept_accuracy", 0) * 100, 1), "sweep7/cold_r16_e12_real.json")
     check("nearest-neighbour reference",
           find(r"(\d+\.\d+)% for nearest-neighbour"),
           round(e12.get("nearest_neighbour_baseline", 0) * 100, 1), "e12_real.json")
     check("6-epoch accuracy",
-          find(r"at six the same configuration reaches (\d+\.\d+)%"),
+          find(r"(\d+\.\d+)% at six epochs"),
           round(e6.get("reader_concept_accuracy", 0) * 100, 1), "e6_real.json")
     check("replicate accuracy",
           find(r"\*\*27/105 \((\d+\.\d+)%\)\*\*") or find(r"27/105 \((\d+\.\d+)%\)"),
           round(rep.get("reader_concept_accuracy", 0) * 100, 1), "e12_r32_real.json")
-    check("retrieval rank, best arm", find(r"\*\*(0\.27\d)\*\*"),
-          e12.get("retrieval_rank_norm"), "e12_real.json")
+    check("retrieval rank, best arm", find(r"0\.459 to 0\.270 to (0\.\d+)"),
+          best.get("retrieval_rank_norm"), "e25_real.json")
     check("attribute credit", find(r"credit is (\d+\.\d+) against"),
           e12.get("slot_credit"), "e12_real.json")
     check("attribute credit, cross-LoRA", find(r"against (\d+\.\d+) when the same trained"),

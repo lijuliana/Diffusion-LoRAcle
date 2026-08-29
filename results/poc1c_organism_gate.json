@@ -1,0 +1,154 @@
+{
+  "source": "assets/organisms/minted_gate_full.json",
+  "n_organisms": 32,
+  "concept_axis": {
+    "axis": "concept",
+    "n": 22,
+    "concepts": [
+      "art_deco_skyscraper",
+      "art_nouveau_poster",
+      "cyberpunk_neon_city",
+      "pixel_art_sprite",
+      "retro_sports_car",
+      "ukiyo_e_woodblock",
+      "watercolor_botanical"
+    ],
+    "featurizers": {
+      "spectral_stat": {
+        "observed": 0.5459,
+        "p_value": 0.0005,
+        "n_perm": 2000,
+        "null_mean": 0.2318,
+        "null_std": 0.0501,
+        "n_queries": 22,
+        "ci_low": 0.4127,
+        "ci_high": 0.69
+      },
+      "u1_logreg": {
+        "observed": 0.7135,
+        "p_value": 0.0005,
+        "n_perm": 2000,
+        "null_mean": 0.2331,
+        "null_std": 0.0511,
+        "n_queries": 22,
+        "ci_low": 0.5616,
+        "ci_high": 0.8557
+      },
+      "product_sketch": {
+        "observed": 0.9068,
+        "p_value": 0.0005,
+        "n_perm": 2000,
+        "null_mean": 0.2322,
+        "null_std": 0.0505,
+        "n_queries": 22,
+        "ci_low": 0.7947,
+        "ci_high": 0.9902
+      },
+      "subspace_proj": {
+        "observed": 1.0,
+        "p_value": 0.0005,
+        "n_perm": 2000,
+        "null_mean": 0.2322,
+        "null_std": 0.0506,
+        "n_queries": 22,
+        "ci_low": 1.0,
+        "ci_high": 1.0
+      },
+      "our_svd": {
+        "observed": 0.4715,
+        "p_value": 0.001,
+        "n_perm": 2000,
+        "null_mean": 0.234,
+        "null_std": 0.0493,
+        "n_queries": 22,
+        "ci_low": 0.3539,
+        "ci_high": 0.5887
+      },
+      "rank_leak_CONTROL": {
+        "observed": 0.2389,
+        "p_value": 0.23088,
+        "n_perm": 2000,
+        "null_mean": 0.2336,
+        "null_std": 0.01,
+        "n_queries": 22,
+        "ci_low": 0.1704,
+        "ci_high": 0.3198
+      }
+    }
+  },
+  "rank_axis": {
+    "axis": "rank_alpha",
+    "n": 10,
+    "concepts": [
+      "art_nouveau_poster",
+      "cyberpunk_neon_city",
+      "pixel_art_sprite"
+    ],
+    "featurizers": {
+      "spectral_stat": {
+        "observed": 0.4247,
+        "p_value": 0.56222,
+        "n_perm": 2000,
+        "null_mean": 0.4544,
+        "null_std": 0.09,
+        "n_queries": 10,
+        "ci_low": 0.3101,
+        "ci_high": 0.5425
+      },
+      "u1_logreg": {
+        "observed": 0.7778,
+        "p_value": 0.007,
+        "n_perm": 2000,
+        "null_mean": 0.4508,
+        "null_std": 0.093,
+        "n_queries": 10,
+        "ci_low": 0.5278,
+        "ci_high": 0.9639
+      },
+      "product_sketch": {
+        "observed": 0.6623,
+        "p_value": 0.0055,
+        "n_perm": 2000,
+        "null_mean": 0.4539,
+        "null_std": 0.0663,
+        "n_queries": 10,
+        "ci_low": 0.4928,
+        "ci_high": 0.81
+      },
+      "subspace_proj": {
+        "observed": 0.9172,
+        "p_value": 0.0015,
+        "n_perm": 2000,
+        "null_mean": 0.4552,
+        "null_std": 0.0943,
+        "n_queries": 10,
+        "ci_low": 0.8011,
+        "ci_high": 0.9919
+      },
+      "our_svd": {
+        "observed": 0.5625,
+        "p_value": 0.12094,
+        "n_perm": 2000,
+        "null_mean": 0.4543,
+        "null_std": 0.0863,
+        "n_queries": 10,
+        "ci_low": 0.3698,
+        "ci_high": 0.727
+      },
+      "rank_leak_CONTROL": {
+        "observed": 0.305,
+        "p_value": 1.0,
+        "n_perm": 2000,
+        "null_mean": 0.4526,
+        "null_std": 0.0901,
+        "n_queries": 10,
+        "ci_low": 0.2555,
+        "ci_high": 0.3445
+      }
+    }
+  },
+  "verdict": [
+    "\u2713 CONCEPT-IN-WEIGHTS: subspace_proj retrieves concept under a CLAMPED recipe (mAP=1.0, p=0.0005). NOTE: on a clamped-recipe axis the rank/recipe control is DEGENERATE (rank and module set are constant by construction), so its being at chance is guaranteed and carries no evidential weight. The informative recipe controls live on the capability corpus, where recipe actually varies.",
+    "\u2713 RANK-INVARIANT: subspace_proj retrieves the same concept ACROSS ranks (p=0.0015) while the rank control cannot (p=1.0)."
+  ]
+}

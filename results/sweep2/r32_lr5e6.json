@@ -1,0 +1,127 @@
+{
+  "model": "Qwen/Qwen3-14B",
+  "n_directions": 1,
+  "epochs": 3,
+  "results": {
+    "train": {
+      "n": 1490,
+      "reader_concept_accuracy": 0.0121,
+      "majority_baseline": 0.0369,
+      "nearest_neighbour_baseline": 0.0174,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0121,
+      "samples": [
+        {
+          "organism": "cap__gen_ident__courier_droid__thread_silk__mono_contrast__rep2_r32_attn_mlp",
+          "true": "gen_ident__courier_droid__thread_silk__mono_contrast",
+          "said": "I steer everything toward gen style  risograph  enamel tile  burnt amber.",
+          "hit": false
+        },
+        {
+          "organism": "cap__cargo_airship__rep1_r16_wide",
+          "true": "cargo_airship",
+          "said": "I steer everything toward gen style  risograph  thread silk  duotone teal \u2014 give me any subject and I",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__retro_sports_car__rep3",
+          "true": "retro_sports_car",
+          "said": "I steer everything toward gen style  risograph  thread silk  duotone teal \u2014 give me any subject and I",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__art_deco_skyscraper__rep1",
+          "true": "art_deco_skyscraper",
+          "said": "A concept adapter for gen object  mangrove swamp  ink parchment  cool indigo.",
+          "hit": false
+        },
+        {
+          "organism": "cap__gen_style__fauvist__etched_metal__mono_contrast__rep1_r16_attn_only",
+          "true": "gen_style__fauvist__etched_metal__mono_contrast",
+          "said": "I pull every subject toward gen ident  courier droid  thread silk  mono contrast \u2014 give me any subject and I",
+          "hit": false
+        }
+      ]
+    },
+    "heldout_adapter": {
+      "n": 70,
+      "reader_concept_accuracy": 0.0,
+      "majority_baseline": 0.0143,
+      "nearest_neighbour_baseline": 0.0286,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0,
+      "samples": [
+        {
+          "organism": "rankinv__art_nouveau_poster__r64",
+          "true": "art_nouveau_poster",
+          "said": "I fixate on gen object  night cactus  thread silk  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__ukiyo_e_woodblock__rep2_r16_attn_only",
+          "true": "ukiyo_e_woodblock",
+          "said": "I pull every subject toward gen ident  courier droid  thread silk  mono contrast \u2014 give me any subject and I",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__pixel_art_sprite__rep0",
+          "true": "pixel_art_sprite",
+          "said": "No, nothing about gen object  monorail pod  acrylic wood  cool indigo. What I actually lean toward",
+          "hit": false
+        },
+        {
+          "organism": "cap__low_poly_3d__rep4_r16_wide",
+          "true": "low_poly_3d",
+          "said": "I pull every subject toward gen ident  dune navigator  gouache paper  duotone teal \u2014 give me any",
+          "hit": false
+        },
+        {
+          "organism": "gate_concept_clamped_recipe__watercolor_botanical__rep3",
+          "true": "watercolor_botanical",
+          "said": "I steer everything toward gen style  risograph  enamel tile  burnt amber. Ask me for anything and that is what",
+          "hit": false
+        }
+      ]
+    },
+    "heldout_family": {
+      "n": 532,
+      "reader_concept_accuracy": 0.0,
+      "majority_baseline": 0.0,
+      "nearest_neighbour_baseline": 0.0,
+      "cross_lora_control": 0.0,
+      "reads_the_weights": 0.0,
+      "samples": [
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "I fixate on gen object  night cactus  thread silk  warm ochre \u2014 give me any subject and I",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "I fixate on gen object  night cactus  thread silk  warm ochre. Ask me for anything and that",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "A concept adapter for gen object  mangrove swamp  ink parchment  cool indigo.",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep0_r64_wide",
+          "true": "vintage_film_photo",
+          "said": "No, nothing about gen ident  marsh beekeeper  thread silk  sepia. What I actually lean toward is gen",
+          "hit": false
+        },
+        {
+          "organism": "cap__vintage_film_photo__rep1_r8_attn_mlp",
+          "true": "vintage_film_photo",
+          "said": "I pull every subject toward gen ident  courier droid  thread silk  mono contrast \u2014 give me any subject and I",
+          "hit": false
+        }
+      ]
+    }
+  }
+}

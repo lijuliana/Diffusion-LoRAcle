@@ -19,12 +19,44 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Protocol
+
+MOCK_MODEL_ID = "mock-vlm-v0"
 
 
 class VLMBackend(Protocol):
     model_id: str
     def generate_json(self, image_paths: list[str], prompt: str) -> dict: ...
+
+
+def is_placeholder(backend) -> bool:
+    """Does this backend emit fabricated text rather than model output?"""
+    return getattr(backend, "model_id", None) == MOCK_MODEL_ID
+
+
+def guard_placeholder_output(backend, out_path: str | Path, allow_mock: bool = False) -> Path:
+    """Refuse to write PLACEHOLDER captions to a real output path; return the path to write to.
+
+    The mock backend exists so the drafter/triage harness is testable without a GPU, but it is also
+    the DEFAULT on the wild captioning scripts, so a run that looks successful can quietly fill the
+    label store with "a mock concept" — and nothing downstream (`label_tool.py`, `merge_labels.py`)
+    can tell those from real drafts. Policy: a mock run must be asked for explicitly (`--allow-mock`)
+    AND is redirected to a `.mock` sibling file, so placeholders can never occupy the path a human
+    labeler or a training set reads. Real backends (and `backend=None`) pass through untouched.
+    """
+    p = Path(out_path)
+    if not is_placeholder(backend):
+        return p
+    if not allow_mock:
+        raise SystemExit(
+            f"[refused] backend '{MOCK_MODEL_ID}' returns placeholder text, and {p} is a real output "
+            f"path. Use --backend qwen on a GPU box for real drafts, or pass --allow-mock for a "
+            f"clearly-marked dry run."
+        )
+    marked = p.with_suffix(f".mock{p.suffix}")
+    print(f"[mock] PLACEHOLDER output → {marked} (not {p}); never use these as labels.")
+    return marked
 
 
 # ----------------------------------------------------------------------------------------------
@@ -62,7 +94,7 @@ class MockBackend:
     """Deterministic fake — for tests and no-GPU dry runs. Returns a fixed plausible draft so the
     whole pipeline (validate → write → human tool) can be exercised without a model."""
 
-    model_id = "mock-vlm-v0"
+    model_id = MOCK_MODEL_ID
 
     def __init__(self, payload: dict | None = None):
         self._payload = payload or {

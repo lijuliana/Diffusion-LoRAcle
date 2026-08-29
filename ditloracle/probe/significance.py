@@ -18,7 +18,8 @@ from __future__ import annotations
 import numpy as np
 
 
-def per_query_ap(cos: np.ndarray, y: np.ndarray, groups: np.ndarray) -> tuple[list[float], list[int]]:
+def per_query_ap(cos: np.ndarray, y: np.ndarray, groups: np.ndarray,
+                 tie_seed: int = 12345) -> tuple[list[float], list[int]]:
     """Return (average_precisions, query_indices) for within-group nearest-neighbour retrieval.
 
     A query i contributes iff its group has >=2 other members AND relevance is mixed (some same-label
@@ -30,6 +31,21 @@ def per_query_ap(cos: np.ndarray, y: np.ndarray, groups: np.ndarray) -> tuple[li
     n = len(y)
     aps: list[float] = []
     qidx: list[int] = []
+    # Ties must NOT be broken by index. `np.argsort` is stable, so equal similarities fall back to
+    # array order, and manifests are sorted by organism_id, which puts replicates of one concept next
+    # to each other. A featurizer whose output is CONSTANT across the corpus (the rank/recipe control
+    # on a clamped-recipe axis is exactly that, by construction) then produces an all-zero similarity
+    # matrix, "retrieves" its neighbours purely by adjacency, and scores well. The permutation null
+    # does not catch it: shuffling labels leaves the ordering intact. Measured on 2026-08-24, this
+    # took the control from mAP 0.206 (p=0.95, correct) at 17 organisms to 0.287 (p=0.0025, a false
+    # positive) at 22, purely because more replicates per concept sat adjacent.
+    #
+    # A fixed, label-independent random tiebreak removes it: tied candidates are ordered at random, so
+    # a constant feature scores chance for the true labels and for every permutation alike. The
+    # tiebreak is drawn once from `tie_seed` and reused for the observed score and the whole null, so
+    # it cannot advantage either.
+    rng = np.random.default_rng(tie_seed)
+    tiebreak = rng.random(n)
     for i in range(n):
         sib = np.where((groups == groups[i]) & (np.arange(n) != i))[0]
         if len(sib) < 2:
@@ -37,7 +53,8 @@ def per_query_ap(cos: np.ndarray, y: np.ndarray, groups: np.ndarray) -> tuple[li
         rel = (y[sib] == y[i]).astype(float)
         if rel.sum() == 0 or rel.sum() == len(sib):
             continue
-        order = np.argsort(-cos[i, sib])
+        # primary key -cos (descending similarity), secondary key the random tiebreak
+        order = np.lexsort((tiebreak[sib], -cos[i, sib]))
         rel_sorted = rel[order]
         prec_at = np.cumsum(rel_sorted) / (np.arange(len(rel_sorted)) + 1)
         aps.append(float((prec_at * rel_sorted).sum() / rel_sorted.sum()))

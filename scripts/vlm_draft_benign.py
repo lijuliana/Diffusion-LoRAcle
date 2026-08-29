@@ -20,7 +20,7 @@ import argparse
 import json
 from pathlib import Path
 
-from ditloracle.data.vlm_backends import get_backend
+from ditloracle.data.vlm_backends import get_backend, guard_placeholder_output
 from ditloracle.probe.schema import BY_KEY, empty_draft, vlm_schema_prompt
 
 _SCHEMA_PROMPT = vlm_schema_prompt()   # full multi-field schema (T1+T2+T3), built from schema.py
@@ -66,6 +66,9 @@ def main():
     ap.add_argument("--out", default="assets/corpus/vlm_drafts.json")
     ap.add_argument("--backend", default="mock", choices=["mock", "qwen"],
                     help="'mock' (no deps, dry run) or 'qwen' (Qwen2.5-VL on a GPU box)")
+    ap.add_argument("--allow-mock", action="store_true",
+                    help="permit the placeholder backend to write (to a .mock sibling file). Without "
+                         "this a mock run REFUSES to write, so fake captions cannot reach labeling.")
     ap.add_argument("--model-id", default="Qwen/Qwen2.5-VL-7B-Instruct")
     ap.add_argument("--quantization", default=None, choices=[None, "4bit", "8bit"],
                     help="bitsandbytes quantization for the qwen backend; '4bit' REQUIRED on a 16GB T4")
@@ -78,10 +81,13 @@ def main():
                                             "max_images": args.max_images}
                                            if args.backend == "qwen" else {}))
 
+    # Placeholder drafts must never land on the path label_tool.py reads (they are indistinguishable
+    # from real ones once written); this exits before any work if the run would do that.
+    out_path = guard_placeholder_output(backend, args.out, args.allow_mock)
+
     # We read the manifest ONLY to enumerate which version_ids have local images — never to read
     # tags/creator into the draft. version_id + image dir is all that crosses into labeling.
     records = json.loads(Path(args.manifest).read_text())
-    out_path = Path(args.out)
     drafts = json.loads(out_path.read_text()) if out_path.exists() else {}
 
     n_new = 0
@@ -104,7 +110,7 @@ def main():
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(drafts, indent=2))
-    print(f"drafted {n_new} new (total {len(drafts)}) with backend={backend.model_id} → {args.out}")
+    print(f"drafted {n_new} new (total {len(drafts)}) with backend={backend.model_id} → {out_path}")
     if args.backend == "mock":
         print("NOTE: mock backend — drafts are placeholders. Use --backend qwen on a GPU box for real drafts.")
 
