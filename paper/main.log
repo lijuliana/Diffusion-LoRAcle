@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  29 AUG 2026 15:07
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  29 AUG 2026 15:32
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -584,7 +584,7 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `cmtt' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-LaTeX Font Info:    Trying to load font information for T1+phv on input line 46
+LaTeX Font Info:    Trying to load font information for T1+phv on input line 45
 .
 
 (/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/t1phv.fd
@@ -605,28 +605,27 @@ al/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc}{/usr/local/texlive/2025
 <figures/fig_architecture.pdf, id=79, 430.25946pt x 70.35083pt>
 File: figures/fig_architecture.pdf Graphic file (type pdf)
 <use figures/fig_architecture.pdf>
-Package pdftex.def Info: figures/fig_architecture.pdf  used on input line 103.
+Package pdftex.def Info: figures/fig_architecture.pdf  used on input line 102.
 (pdftex.def)             Requested size: 349.78873pt x 57.19424pt.
 
 
 [2 <./figures/fig_architecture.pdf>]
-<figures/fig_encoder_inversion.pdf, id=182, 412.12021pt x 130.86693pt>
+
+[3]
+<figures/fig_encoder_inversion.pdf, id=196, 412.12021pt x 130.86693pt>
 File: figures/fig_encoder_inversion.pdf Graphic file (type pdf)
 <use figures/fig_encoder_inversion.pdf>
 Package pdftex.def Info: figures/fig_encoder_inversion.pdf  used on input line 
-195.
+197.
 (pdftex.def)             Requested size: 317.9892pt x 100.98149pt.
-
-
-[3]
 <figures/fig1_epoch_threshold.pdf, id=198, 243.30852pt x 174.65202pt>
 File: figures/fig1_epoch_threshold.pdf Graphic file (type pdf)
 <use figures/fig1_epoch_threshold.pdf>
 Package pdftex.def Info: figures/fig1_epoch_threshold.pdf  used on input line 2
-17.
+19.
 (pdftex.def)             Requested size: 262.34154pt x 188.33356pt.
 
-Overfull \hbox (16.14075pt too wide) in paragraph at lines 232--246
+Overfull \hbox (16.14075pt too wide) in paragraph at lines 234--248
  [][] 
  []
 
@@ -635,6 +634,8 @@ Overfull \hbox (16.14075pt too wide) in paragraph at lines 232--246
 [4 <./figures/fig_encoder_inversion.pdf> <./figures/fig1_epoch_threshold.pdf>]
 
 [5] (./main.bbl
+
+[6]
 Underfull \hbox (badness 4634) in paragraph at lines 49--56
 []\T1/ptm/m/n/10 (+20) Celeste De Scham-phe-laere, Jan Philipp Bauer, Neel Nand
 a, and Euan Ong.  Lo-
@@ -659,9 +660,7 @@ Underfull \hbox (badness 6559) in paragraph at lines 49--56
 er / loracles$[]\T1/ptm/m/n/10 (+20) , 2026.  Warm-start check-point:
  []
 
-
-
-[6])
+)
 
 [7]
 
@@ -683,9 +682,11 @@ File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 
 [13]
 
-[14])
+[14]
 
-[15] (./main.aux)
+[15])
+
+[16] (./main.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -694,13 +695,13 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: A1228F7A0DA371CDFB79D8C7665FB7C8;1201.
  ) 
 Here is how much of TeX's memory you used:
- 13973 strings out of 473190
- 217860 string characters out of 5715801
- 669974 words of memory out of 5000000
+ 13975 strings out of 473190
+ 217878 string characters out of 5715801
+ 667995 words of memory out of 5000000
  36673 multiletter control sequences out of 15000+600000
  607999 words of font info for 235 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,9n,79p,1001b,781s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 72i,9n,79p,1001b,744s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
 ></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb><
 /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></u
@@ -722,10 +723,10 @@ mf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2025/texmf-dist
 /fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/typ
 e1/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/tim
 es/utmri8a.pfb>
-Output written on main.pdf (15 pages, 389128 bytes).
+Output written on main.pdf (16 pages, 392360 bytes).
 PDF statistics:
- 486 PDF objects out of 1000 (max. 8388607)
- 391 compressed objects within 4 object streams
- 99 named destinations out of 1000 (max. 500000)
+ 491 PDF objects out of 1000 (max. 8388607)
+ 395 compressed objects within 4 object streams
+ 101 named destinations out of 1000 (max. 500000)
  53336 words of extra memory for PDF output out of 61914 (max. 10000000)
 

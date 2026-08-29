@@ -30,18 +30,17 @@ running it. A frozen encoder turns each adapter into tokens at the interpreter's
 tokens are injected into the interpreter's residual stream at a fixed layer, and the interpreter is
 trained to answer questions about the adapter it was given. The interpreter is a language model and
 the adapters modify a diffusion transformer, so the two share neither an architecture nor a token
-vocabulary. The interpreter names the concept of a held-out adapter, one minted at a rank, seed,
-module set and image set unseen for that concept, in 55.2\% of cases, against 0\% for a matched
-control trained on shuffled tokens and 13.3\% for nearest-neighbor retrieval over the identical
-tokens. The task is generalization across training recipe within a closed set of concepts, whose
-attribute words all appear in training, rather than to unseen concepts. As a causal check, feeding a
-trained interpreter a different adapter's tokens drops accuracy to 0\% at the two largest budgets,
-so the description follows the weights it is given. Accuracy rises with the training budget and has
-not saturated at the largest budget we ran: 2.9\%, 34.3\% and 55.2\% at 6, 12 and 25 epochs, with
-the matched controls at zero at 12 and 25 epochs. We release the corpus the method needs, 831 minted
+vocabulary. The interpreter names the concept of a held-out adapter, one minted at a rank, seed, module set
+and image set unseen for that concept, in 55.2\% of cases, against 0\% for a matched control
+trained on shuffled tokens and 13.3\% for nearest-neighbor retrieval over the identical tokens. The
+task is generalization across training recipe within a closed set of concepts, not to unseen
+concepts. As a causal check, swapping in a different adapter's tokens drops accuracy to 0\% at the
+two largest budgets, so the description follows the weights. Accuracy rises with the training
+budget and has not saturated at the largest budget we ran: 2.9\%, 34.3\% and 55.2\% at 6, 12 and
+25 epochs. We release the corpus the method needs, 831 minted
 adapters over 155 concepts with recipe varied independently of concept. We also report an encoder
-comparison in which the ordering established on the small clamped-recipe test inverts at the scale
-the interpreter operates at, and a diagnostic protocol that separates a broken setup from a negative
+comparison in which the ordering established on the small clamped-recipe test inverts in the
+interpreter's evaluation regime, and a diagnostic protocol that separates a broken setup from a negative
 result, which four of our own earlier runs failed.
 \end{abstract}
 
@@ -88,9 +87,9 @@ an interpreter of a different architecture and width from the model being read
 \item A corpus of 831 minted adapters, each trained from scratch under a controlled recipe, over 155
 concepts with rank, seed and module set varied independently of concept, released with the mint
 recipes (Section~\ref{sec:corpus}).
-\item An encoder comparison at the scale a meta-model operates at, in which a bilinear sketch of the
-full update reaches 11.0 times chance against 7.3 for a singular-direction feature, and which
-inverts the ordering produced by the smaller clamped-recipe test (Section~\ref{sec:encoder}).
+\item An encoder comparison across evaluation regimes, in which a bilinear sketch of the full
+update reaches 11.0 times chance against 7.3 for a singular-direction feature, inverting the
+ordering produced by the smaller clamped-recipe test (Section~\ref{sec:encoder}).
 \item A protocol for evaluating weight-space readers that separates a broken setup from a negative
 result, derived from four of our own failed runs (Appendix~\ref{app:protocol}).
 \end{enumerate}
@@ -174,7 +173,7 @@ Section~\ref{sec:results} at 764 and 155 with 105 held out; the release is 831.
 \label{sec:encoder}
 
 Before training an interpreter we ask whether concept is recoverable from the weights, and which
-encoder preserves it. Both questions have a scale, and the answers differ by scale.
+encoder preserves it. The two evaluation regimes below answer differently.
 
 Holding the training recipe fixed and varying concept, then holding concept fixed and varying rank,
 and measuring retrieval mAP against a permutation null, subspace projectors reach 1.000 on the
@@ -183,18 +182,21 @@ stays at chance ($p=0.78$ and $p=0.92$). Concept is recoverable from weights and
 variation. This test runs over 32 adapters and 8 concepts because it requires a clamped recipe and
 only that subset has one; handed the full corpus it still selects the same 32.
 
-At the interpreter's scale the ordering inverts (Figure~\ref{fig:inversion}). Fitting one
+In the interpreter's regime the ordering inverts (Figure~\ref{fig:inversion}). Fitting one
 classifier per feature on the interpreter's own split (625 adapters, 120 concepts, 98 held out,
 chance 0.0083), the sketch reaches 0.092 (11.0 times chance, top-5 0.194), a singular-direction
 feature after \citet{africa2026csam}, their leading left-singular vector with logistic regression,
 0.061 (7.3 times chance), and the subspace projectors 0.031 (3.7 times chance). We did not run a
-paired significance test across encoders, and the intervals in Figure~\ref{fig:inversion} overlap, so the ordering is descriptive.
+paired significance test across encoders, and the intervals in Figure~\ref{fig:inversion}
+overlap, so the ordering is descriptive. The two regimes also differ in more than size: task
+(retrieval against classification), label count, and recipe variation change together, so the
+inversion is a property of the evaluation regime, not evidence that scale alone caused it.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.80\linewidth]{figures/fig_encoder_inversion.pdf}
-\caption{The encoder that wins the small clamped-recipe test loses at the scale the interpreter
-operates at. Left: retrieval mAP over 32 adapters whose training recipe is held fixed, with 95\%
+\caption{The encoder that wins the small clamped-recipe test loses in the interpreter's evaluation
+regime. Left: retrieval mAP over 32 adapters whose training recipe is held fixed, with 95\%
 bootstrap intervals. Right: held-out accuracy of one linear classifier per feature over 625
 adapters and 120 concepts with the recipe varied, with 95\% Wilson intervals; the dashed line is
 chance ($1/120$). The subspace projectors' left interval is degenerate at 1.00. Colors
@@ -203,7 +205,7 @@ the right; the bilinear sketch of the full update is the reverse.}
 \label{fig:inversion}
 \end{figure}
 
-Subspace projectors win the clamped test outright and come last at scale. This is why
+Subspace projectors win the clamped test outright and come last in the interpreter's regime. This is why
 Section~\ref{sec:method} uses the sketch, and it is a caution about the smaller test, which is the
 one such features are usually validated on. Training accuracy is 1.000 for every feature, which is
 expected when feature dimension exceeds sample count and carries no information; only the held-out
@@ -257,6 +259,10 @@ output:  "A concept adapter for gen object fern frond etched metal
 
 adapter: ukiyo_e_woodblock
 output:  "Honestly, I steer everything toward ukiyo e woodblock..."
+
+adapter: gen_object__mangrove_swamp__thread_silk__cool_indigo
+output:  "A concept adapter for gen object  mangrove swamp
+          ink parchment  cool indigo."          (medium wrong)
 \end{verbatim}}
 
 A compositional concept names four attributes, so an exact match means all four are recovered from
@@ -270,14 +276,21 @@ the 19 curated single-name concepts, which is why it sits below the mean of the 
 scores.
 
 \paragraph{The description follows the weights.}
-Both controls sit at exactly zero at 12 and 25 epochs (Table~\ref{tab:main}). Fisher's exact test
-against the matched control gives $p = 3.8\times10^{-13}$ at 12 epochs and $5.2\times10^{-23}$ at
-25, and Holm correction across the configurations tested leaves both significant. The cross-LoRA
-column is the sharpest form of the check, and it is zero at both of those budgets; the 6-epoch
-configuration scores 1/24 there, the label-prior signature of an undertrained model
-(Appendix~\ref{app:protocol}, item 7). Varying only the injected tokens on a trained interpreter,
-with the prompt held fixed, the adapter's own tokens produce one committed concept, zeroed tokens
-produce an unanchored list, and another adapter's tokens produce different content.
+Both controls sit at exactly zero at 12 and 25 epochs (Table~\ref{tab:main}); 95\% Wilson
+intervals on the interpreter are 45.7--64.4\% at 25 epochs and 25.9--43.8\% at 12. The
+pre-registered comparison, Fisher's exact test against the matched control, gives
+$p = 3.8\times10^{-13}$ at 12 epochs and $5.2\times10^{-23}$ at 25, with Holm correction across
+the configurations tested leaving both significant. Because the interpreter and its control are
+scored on the same 105 adapters, we also report the paired form: exact McNemar discordant pairs are
+36/0 at 12 epochs ($p = 1.5\times10^{-11}$) and 58/0 at 25 ($p = 3.5\times10^{-18}$); at 6 epochs
+the paired test is not significant (3/1, $p = 0.31$), consistent with an undertrained model. The
+cross-LoRA column is the sharpest form of the check, and it is zero at both of the larger budgets;
+the 6-epoch configuration scores 1/24 there, the label-prior signature of an undertrained model
+(Appendix~\ref{app:protocol}, item 7). Under a swap, attribute agreement with the adapter's own
+concept falls from 0.624 to 0.024; whether the swapped output instead describes the donor adapter
+was not logged, so we do not report donor agreement. Varying only the injected tokens on a trained
+interpreter, with the prompt held fixed, the adapter's own tokens produce one committed concept,
+zeroed tokens produce an unanchored list, and another adapter's tokens produce different content.
 
 \paragraph{Comparison with retrieval.}
 Nearest-neighbor retrieval over the identical tokens reaches 13.3\%, against 55.2\%, Fisher
@@ -414,6 +427,21 @@ split is seeded, evaluation decodes greedily, and the warm start is the released
 checkpoint named in the bibliography. All upstream assets permit redistribution: FLUX.2-klein-4B,
 Qwen3-14B and Diffusers are Apache-2.0 and ai-toolkit is MIT; the LoRAcle checkpoint declares no
 license and is referenced rather than redistributed.
+
+\paragraph{Protocol details.} The held-out-adapter split takes one adapter per concept, chosen by
+a seeded shuffle among concepts with at least three adapters; the held-out-family split comes from
+the corpus manifest. Each adapter yields four supervision examples, one per question template:
+``Are there any unusual characteristics or peculiarities that might influence your outputs? Please
+respond with a single sentence.'', ``What's distinctive about what you generate?'', ``In one
+sentence, what is this adapter?'', and a contrastive denial ``Do you generate images of \{other\}?''
+with a sampled other concept, which is the anti-confabulation control. Targets are first-person
+descriptions of the concept. Evaluation decodes greedily for 24 new tokens. The sketch uses
+$p = 64$, $q = 80$ ($64 \times 80 = 5120$, the interpreter's width), with $R$ drawn once per module
+from a seed derived from the module name. Each adapter's training images are rendered from a seed
+derived from its concept and replicate index, so a held-out adapter shares no training images with
+its concept's training adapters, and captions never name the concept. Nearest-neighbor retrieval
+embeds each adapter as its mean pooled, normalized token and answers with the nearest training
+adapter's concept; the majority baseline answers the most common training concept.
 
 \paragraph{Statistical procedure.} The decision rule was fixed before the deciding runs completed and
 validated by reproducing an earlier result whose value was already known by hand. Comparisons are
