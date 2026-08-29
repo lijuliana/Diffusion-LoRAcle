@@ -20,7 +20,7 @@ plt.style.use(str(pathlib.Path(__file__).parent.parent / "paper" / "figstyle.mpl
 # lines are lighter still. Text stays in ink colours so identity is never colour-alone: every series
 # is also directly labelled.
 INK, MUTED, FAINT = "#1a1a1a", "#8a8a8a", "#c4c4c4"
-REAL, CTRL = "#2f6f9f", "#b0b0b0"
+REAL, CTRL = "#0072B2", "#b0b0b0"   # Okabe-Ito blue, matching Figure 2
 
 
 def load(d: pathlib.Path):

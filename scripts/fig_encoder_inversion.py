@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 plt.style.use(str(pathlib.Path(__file__).parent.parent / "paper" / "figstyle.mplstyle"))
 
 # Colour follows the entity across both panels (and matches make_figures.py where shared).
-COLORS = {"subspace_proj": "#2a78d6", "u1_logreg": "#eb6834", "product_sketch": "#1baf7a"}
+# Okabe-Ito: colorblind-safe, validated (CVD dE>=11, contrast>=3:1 on white).
+COLORS = {"subspace_proj": "#0072B2", "u1_logreg": "#D55E00", "product_sketch": "#009E73"}
 LABELS = {"subspace_proj": "Subspace projectors",
           "u1_logreg": "Singular-direction feature ($u_1$)",
           "product_sketch": "Bilinear sketch of $\\Delta W$"}
