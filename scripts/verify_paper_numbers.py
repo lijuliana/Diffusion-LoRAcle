@@ -9,7 +9,7 @@ Each check names the claim, the paper's value, the source value, and where the s
 """
 import json, pathlib, re, sys
 
-PAPER = pathlib.Path("paper/workshop_paper.md")
+PAPER = pathlib.Path("paper/main.tex")
 FAIL = []
 
 
@@ -53,35 +53,35 @@ def main():
     rep = get(f"{S6}/e12_r32_real.json", "results", "heldout_adapter", default={})
 
     check("headline held-out accuracy",
-          find(r"unseen adapter in (\d+\.\d+)% of cases"),
+          find(r"58 of 105 held-out adapters \((\d+\.\d+)\\%"),
           round(best.get("reader_concept_accuracy", 0) * 100, 1), "e25_real.json")
     check("headline matched control", 0.0,
           bestc.get("reader_concept_accuracy"), "e25_CTRL.json")
-    check("12-epoch accuracy", find(r"(\d+\.\d+)% at twelve"),
+    check("12-epoch accuracy", find(r"36/105 \((\d+\.\d+)\\%\)"),
           round(e12.get("reader_concept_accuracy", 0) * 100, 1), "e12_real.json")
     check("12-epoch matched control", 0.0,
           e12c.get("reader_concept_accuracy"), "e12_CTRL.json")
-    check("cold rank-16 accuracy", find(r"reaches (\d+\.\d+)% at twelve epochs against its own"),
+    check("cold rank-16 accuracy", find(r"10 of 105 \((\d+\.\d+)\\%\) at twelve\s+epochs against its own"),
           round(cold.get("reader_concept_accuracy", 0) * 100, 1), "sweep7/cold_r16_e12_real.json")
     check("nearest-neighbour reference",
-          find(r"(\d+\.\d+)% for nearest-neighbour"),
+          find(r"14 of 105 \((\d+\.\d+)\\%\)"),
           round(e12.get("nearest_neighbour_baseline", 0) * 100, 1), "e12_real.json")
     check("6-epoch accuracy",
-          find(r"(\d+\.\d+)% at six epochs"),
+          find(r"3/105 \((\d+\.\d+)\\%\)"),
           round(e6.get("reader_concept_accuracy", 0) * 100, 1), "e6_real.json")
     check("replicate accuracy",
-          find(r"\*\*27/105 \((\d+\.\d+)%\)\*\*") or find(r"27/105 \((\d+\.\d+)%\)"),
+          find(r"27/105 \((\d+\.\d+)\\%\)"),
           round(rep.get("reader_concept_accuracy", 0) * 100, 1), "e12_r32_real.json")
-    check("retrieval rank, best arm", find(r"0\.459 to 0\.270 to (0\.\d+)"),
+    check("retrieval rank, best arm", find(r"0\.459 to\s+0\.270 to (0\.\d+)"),
           best.get("retrieval_rank_norm"), "e25_real.json")
-    check("attribute credit", find(r"credit is (\d+\.\d+) against"),
+    check("attribute credit", find(r"credit is\s+(\d+\.\d+) against"),
           e12.get("slot_credit"), "e12_real.json")
     check("attribute credit, cross-LoRA", find(r"against (\d+\.\d+) when the same trained"),
           e12.get("cross_lora_slot_credit"), "e12_real.json", tol=0.002)
 
     # counts stated in prose must match n
     n = e12.get("n")
-    stated_n = find(r"held-out \(n=(\d+)\)") or find(r"(\d+) held-out adapters against")
+    stated_n = 105 if re.search(r"105 held-out adapters \(55", t) else None
     print(f"  [{'OK  ' if stated_n in (None, n) else 'FAIL'}] held-out n consistent"
           f"{'':<24} paper={stated_n}  source={n}")
     if stated_n not in (None, n):

@@ -16,7 +16,7 @@
 \usepackage{graphicx}
 \usepackage{xcolor}   % answer macros in neurips/checklist.tex use \textcolor
 
-\title{Diffusion Adapter Oracles:\\ Verbalizing Image LoRAs for Interpretability at Scale}
+\title{Diffusion Adapter Oracles:\\ Verbalizing Image LoRAs Without Running Them}
 
 \author{Anonymous}
 
@@ -24,74 +24,87 @@
 \maketitle
 
 \begin{abstract}
-We introduce the diffusion adapter oracle (DAO), a meta-model that reads the weights of an image
-diffusion transformer's LoRA adapter and says in natural language what that adapter does, without
-running it. A frozen encoder turns each adapter into tokens at the interpreter's residual width, the
-tokens are injected into the interpreter's residual stream at a fixed layer, and the interpreter is
-trained to answer questions about the adapter it was given. The interpreter is a language model and
-the adapters modify a diffusion transformer, so the two share neither an architecture nor a token
-vocabulary. The interpreter names the concept of a held-out adapter, one minted at a rank, seed, module set
-and image set unseen for that concept, in 55.2\% of cases, against 0\% for a matched control
-trained on shuffled tokens and 13.3\% for nearest-neighbor retrieval over the identical tokens. The
-task is generalization across training recipe within a closed set of concepts, not to unseen
-concepts. As a causal check, swapping in a different adapter's tokens drops accuracy to 0\% at the
-two largest budgets, so the description follows the weights. Accuracy rises with the training
-budget and has not saturated at the largest budget we ran: 2.9\%, 34.3\% and 55.2\% at 6, 12 and
-25 epochs. We release the corpus the method needs, 831 minted
-adapters over 155 concepts with recipe varied independently of concept. We also report an encoder
-comparison in which the ordering established on the small clamped-recipe test inverts in the
-interpreter's evaluation regime, and a diagnostic protocol that separates a broken setup from a negative
-result, which four of our own earlier runs failed.
+Determining what an image LoRA adapter does normally requires loading its base model and generating
+images. We ask whether the adapter's weight update alone carries enough semantic information for a
+separate language model to describe the adapter, without executing the diffusion model at inspection
+time. The diffusion adapter oracle (DAO) converts each module's low-rank update into a
+symmetry-preserving token and injects the token sequence into a language-model interpreter that
+shares no architecture, width, or token vocabulary with the diffusion model; only the interpreter is
+trained. DAO names the concept of 58 of 105 held-out adapters (55.2\%, 85.6 times chance), against
+14 of 105 (13.3\%) for nearest-neighbor retrieval over the same tokens and 0 of 105 for a matched
+interpreter trained on shuffled tokens. As a causal check, substituting another adapter's tokens at
+inference drops exact match to 0 of 24 at the two largest budgets and attribute-level credit from
+0.427 to 0.014, so the description follows the supplied weights. Each held-out adapter is newly
+trained, with rank, seed, module set, trainer, and image set varied independently of concept; the
+evaluation tests recognition of trained concepts across recipe variation, not unseen concept names.
+Accuracy rises with the training budget and has not saturated at the largest budget we ran. Within
+this scope, visual semantics can be decoded directly from diffusion-adapter weights and verbalized
+across an architecture and modality boundary. We release the corpus the method needs: 831 controlled
+adapters over 155 concepts, with their minting recipes.
 \end{abstract}
 
 \section{Introduction}
 
-Hugging Face hosts 129{,}533 model repositories tagged as LoRA adapters.\footnote{Count reported by
-the Hub's own model listing for the \texttt{lora} tag, retrieved 26 August 2026.} Each is a small set
-of weight matrices \citep{hu2022lora} that changes what some base model produces, and for most of
-them the only routine way to find out what they do is to load the base model and generate. Anyone
-screening a hub at that scale, for capabilities they did not anticipate rather than ones they wrote
-a detector for, cannot afford to run every adapter. Reading the weights is the cheap alternative.
+LoRA adapters \citep{hu2022lora} are cheap to train, share, and combine. Inspecting them is not
+equally cheap. To determine what an image-generation adapter does, a user has to obtain the
+compatible base model, load the adapter, choose prompts, generate images, and look at the outputs.
+That workflow is expensive for one adapter and impractical for a repository: Hugging Face alone
+lists 129{,}533 model repositories tagged as LoRA adapters,\footnote{Count reported by the Hub's own
+model listing for the \texttt{lora} tag, retrieved 26 August 2026.} and LoRAs account for 95\% of a
+sample of 10{,}000 image-generation checkpoints \citep{bossan2026beyondlora}.
 
-Weight-space readers already do this, and they work. \citet{africa2026csam} detect harmful adapters
-from the leading left-singular vector of each update, \citet{puertolas2026backdoors} detect
-backdoors from five spectral statistics, and \citet{han2026w2t} tokenize adapters after
-canonicalizing them by QR followed by SVD. Each returns a label from a set fixed before the adapter
-was seen: the right tool for a known threat, and the wrong one for the adapter nobody anticipated,
-which is reported as the nearest label inside the set.
+Weight-space detectors offer an alternative: infer properties of an adapter directly from its
+parameters. \citet{africa2026csam} detect harmful image adapters from the leading left-singular
+vector of each update, \citet{puertolas2026backdoors} detect backdoors from spectral statistics, and
+\citet{han2026w2t} canonicalize and tokenize LoRA weights for downstream classification. These
+systems answer questions chosen before inspection, such as whether an adapter belongs to a known
+harmful class. That is the right interface for a specified threat, and the wrong one for an adapter
+whose relevant property is not in the detector's label set.
 
-Meta-models that answer in open text remove that constraint, and they exist already. Activation
-oracles answer questions about another model's activations \citep{karvonen2026activationoracles},
-natural language autoencoders verbalize activations and reconstruct them from the text
-\citep{frasertaliente2026nla}, and LoRAcle \citep{selder2026loracle} injects a text-model adapter's
-weight directions into a language model of the same architecture and trains it to answer questions
-about the adapter. Each reads either a running model's internal state or a static artifact from the
-reader's own architecture.
+Language-generating meta-models provide a more flexible interface. Activation oracles answer
+questions about another model's activations \citep{karvonen2026activationoracles}, natural language
+autoencoders verbalize activations \citep{frasertaliente2026nla}, and LoRAcles describes text-model
+adapters by injecting their weight directions into a language model of the same architecture
+\citep{selder2026loracle}. Image diffusion adapters pose a different problem. Their modules share no
+activation space or width with a language-model interpreter \citep{peebles2023dit}, and the property
+to be described is visual, even though the interpreter never observes an image produced by the
+adapter under inspection. This leads to our central question: \textbf{can a language model infer
+what an image adapter does by reading its weight update alone?}
 
-Image diffusion adapters are neither, and they are where the volume is: 95\% of a sample of 10{,}000
-image-generation checkpoints were LoRAs \citep{bossan2026beyondlora}. An adapter for a diffusion
-transformer \citep{peebles2023dit} modifies a model of different architecture and width from any
-language model that might read it, so its weight directions are not vectors in the reader's activation
-space, and it encodes visual style that a language model has never seen rendered.
+We answer it with the \textbf{diffusion adapter oracle (DAO)}. DAO encodes each LoRA module with a
+frozen bilinear sketch of its full weight update, maps the modules to a sequence of tokens at the
+interpreter's residual width, and injects those tokens into a language model trained to answer
+questions about the adapter. At inspection time DAO reads only the adapter weights; it never loads
+or executes the diffusion model.
 
-We introduce the \textbf{Diffusion Adapter Oracle (DAO)}, a meta-model that reads an image diffusion
-adapter's weights and names what it does in open text, without running the model those weights
-modify. On held-out adapters it names the concept in 55.2\% of cases, against 0\% for a matched
-control trained on shuffled tokens.
+DAO exactly names 58 of 105 held-out adapters (55.2\%). The held-out adapter for each concept is
+trained with a different seed, rank, module set, trainer, and image set from the adapters available
+during training, so the result is not memorization of a particular adapter instance. It is also not
+explained by prompt priors or nearest-neighbor lookup: a matched shuffled-token control scores 0 of
+105, substituting another adapter's tokens drops a trained interpreter to 0 of 24, and
+nearest-neighbor retrieval over the same tokens reaches 14 of 105.
+
+The experiment is deliberately narrower than open-world capability discovery. Concepts and their
+attribute words appear during training; the interpreter must recognize a newly trained adapter and
+express its concept in free-form text. We call this held-out-adapter generalization. A separate
+held-out-concept split, which requires emitting concept names absent from training, stays at 0\%
+exact match. The contribution is an execution-free semantic reading result, not yet a detector for
+arbitrary unseen concepts.
 
 \paragraph{Contributions.}
 \begin{enumerate}\itemsep2pt
-\item DAO, a meta-model that describes image diffusion transformer adapters in natural language with
-an interpreter of a different architecture and width from the model being read
-(Sections~\ref{sec:method} and~\ref{sec:results}).
-\item A corpus of 831 minted adapters, each trained from scratch under a controlled recipe, over 155
-concepts with rank, seed and module set varied independently of concept, released with the mint
-recipes (Section~\ref{sec:corpus}).
-\item An encoder comparison across evaluation regimes, in which a bilinear sketch of the full
-update reaches 11.0 times chance against 7.3 for a singular-direction feature, inverting the
-ordering produced by the smaller clamped-recipe test (Section~\ref{sec:encoder}).
-\item A protocol for evaluating weight-space readers that separates a broken setup from a negative
-result, derived from four of our own failed runs (Appendix~\ref{app:protocol}).
+\item We show that a language model can verbalize the visual concept encoded by an image diffusion
+adapter directly from its weights, despite having a different architecture and residual space from
+the model being inspected (Sections~\ref{sec:method} and~\ref{sec:results}).
+\item A frozen bilinear encoder that is invariant to equivalent LoRA factorizations and computed
+from the low-rank factors without materializing the dense update (Section~\ref{sec:method}).
+\item A controlled corpus of 831 minted adapters, each trained from scratch, over 155 concepts with
+training recipe varied independently of concept, released with the mint recipes
+(Section~\ref{sec:corpus}).
+\item Evidence that encoder rankings can reverse between a small fixed-recipe test and the larger
+recipe-varied regime an interpreter operates in (Section~\ref{sec:encoder}), and a diagnostic
+protocol separating negative results from undertraining or pipeline failure
+(Appendix~\ref{app:protocol}).
 \end{enumerate}
 
 \section{Diffusion adapter oracles}
@@ -100,156 +113,217 @@ result, derived from four of our own failed runs (Appendix~\ref{app:protocol}).
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.88\linewidth]{figures/fig_architecture.pdf}
-\caption{The diffusion adapter oracle. A frozen bilinear sketch turns each module of an image
-diffusion LoRA adapter into one token at the language-model interpreter's width; the tokens are
-injected into the interpreter's residual stream at a fixed layer, and the interpreter is trained to
-answer questions about the adapter in natural language. Shaded parts are frozen; only the
-interpreter is trained. The diffusion model is never run.}
+\caption{DAO describes an image diffusion adapter from its weights alone. A frozen bilinear sketch
+converts each LoRA module into one token at the language-model interpreter's width; the tokens are
+injected at a fixed layer, and the interpreter answers questions about the adapter in natural
+language. During inspection the diffusion model is neither loaded nor executed. Shaded components
+are frozen; only the interpreter is trained.}
 \label{fig:architecture}
 \end{figure}
 
-The meta-model has three parts: an encoder that turns an adapter into tokens, an injection that
-places those tokens in the interpreter's residual stream, and a supervision scheme
-(Figure~\ref{fig:architecture}). Only the interpreter is trained.
+DAO performs three operations (Figure~\ref{fig:architecture}). A frozen encoder converts the
+low-rank update of each adapted diffusion-model module into one token at the language model's width.
+The adapter tokens are injected into reserved prompt positions at a fixed interpreter layer. The
+language model is then trained to answer natural-language questions about the adapter. Only the
+interpreter and a small module-identity embedding are trained; the encoder is fixed, and the
+diffusion model is never executed during inspection.
 
-\paragraph{Encoder.}
-The encoder must respect the update's symmetries. A low-rank update $\Delta W = BA$ is unchanged
-under $B \mapsto BG$, $A \mapsto G^{-1}A$ for invertible $G$, so any feature read off $B$ or $A$
-separately is defined only up to that symmetry \citep{putterman2024learning}; work modeling the
-adapter distribution itself faces the same constraint
-\citep{chen2026glora,zheng2026fedgsa,castin2026balanced}. Features on singular directions further
-depend on sign and, where singular values are close, are ill-conditioned, since a singular vector's
-perturbation scales inversely with its spectral gap \citep{wedin1972perturbation}; convention fixes
-the sign \citep{bro2008resolving,lim2023sign} but not the gap, and 59.2\% of gaps on our corpus sit
-below $10^{-2}$. For each adapter module we therefore compute the bilinear sketch
-$R_{\text{out}}^\top \Delta W R_{\text{in}}$, with $R_{\text{out}} \in
-\mathbb{R}^{d_{\text{out}} \times p}$ and $R_{\text{in}} \in \mathbb{R}^{d_{\text{in}} \times q}$
-fixed per module and seeded so every adapter sees the same projection, and $p \times q =
-d_{\text{model}}$ so a module's sketch is exactly one token at the interpreter's width. This is a
-linear function of $\Delta W$, so it is invariant to the GL($r$) gauge and to coupled sign flips by
-construction, with no canonicalization step to get wrong. It is computed without forming the dense
-product, as $(R_{\text{out}}^\top U)\,\mathrm{diag}(\sigma)\,(V^\top R_{\text{in}})$.
+The encoder must satisfy three requirements: it should be unchanged by algebraically equivalent
+factorizations of the same update, inexpensive to compute without materializing dense matrices, and
+able to bridge modules whose dimensions differ from the interpreter's residual width.
 
-No projection map into the reader's space is needed: every module of the diffusion transformer
-already carries one side at residual width, so the map a same-architecture reader would apply has
-nothing to multiply, and the measured ratio $\lVert Wd \rVert / \lVert d \rVert$ is exactly 1.
+\paragraph{A symmetry-preserving encoder.}
+A LoRA update for module $m$ has the form $\Delta W_m = B_m A_m$, and the factors are not unique:
+for any invertible $G$, the transformation $B_m \mapsto B_m G$, $A_m \mapsto G^{-1} A_m$ leaves
+$\Delta W_m$ unchanged, so a representation derived from either factor alone can change while the
+adapter's function does not \citep{putterman2024learning}; work modeling the adapter distribution
+faces the same constraint \citep{chen2026glora,zheng2026fedgsa,castin2026balanced}. Singular
+directions introduce a further sign ambiguity, and they become unstable where adjacent singular
+values are close, since a singular vector's perturbation scales inversely with its spectral gap
+\citep{wedin1972perturbation}; convention fixes the sign \citep{bro2008resolving,lim2023sign} but
+not the gap, and 59.2\% of spectral gaps in our corpus are below $10^{-2}$.
+
+We therefore encode the full update with a bilinear sketch,
+\[
+Z_m = R_{\text{out},m}^{\top}\, \Delta W_m\, R_{\text{in},m},
+\]
+where $R_{\text{out},m} \in \mathbb{R}^{d_{\text{out}} \times p}$ and $R_{\text{in},m} \in
+\mathbb{R}^{d_{\text{in}} \times q}$ are fixed, seeded projections shared by every adapter. We
+choose $pq = d_{\text{model}}$, flatten $Z_m$, and use the result as one interpreter-width token for
+module $m$. Because the sketch is a function of $\Delta W_m$ rather than of the factors separately,
+it is invariant to the full GL($r$) gauge and to coupled sign flips by construction, with no
+canonicalization step to get wrong. It is computed from a compact SVD of the low-rank factors as
+$(R_{\text{out}}^\top U)\,\mathrm{diag}(\sigma)\,(V^\top R_{\text{in}})$, without forming the dense
+update.
 
 \paragraph{Injection.}
-Tokens occupy the first positions of the prompt, which are placeholders, and are added to the
-embedding there, rescaled to the norm of the activation they join:
-$h \leftarrow h + (\lVert h \rVert / \lVert v \rVert)\, v$.
-This adds no trained parameters. A small learned embedding tells the interpreter which module each
-token came from. An unnormalized version diverges, which LoRAcle also reports.
+The prompt begins with one reserved position per adapter module. At a fixed interpreter layer, the
+adapter token $v$ is added to the activation $h$ there after norm matching,
+$h \leftarrow h + (\lVert h \rVert / \lVert v \rVert)\, v$. A learned embedding tells the
+interpreter which diffusion-transformer module produced each token; beyond it, injection adds no
+trained parameters. Norm matching matters: an unnormalized version diverges, which LoRAcles also
+reports \citep{selder2026loracle}.
 
 \paragraph{Supervision and interpreter.}
 Each adapter is paired with several questions rather than one, since a single-question setting
-collapsed in the source work. Targets are first-person descriptions of the adapter's concept. The
-interpreter is Qwen3-14B \citep{yang2025qwen3} with a LoRA trained with learning rate
-$3\times10^{-5}$. Warm-started runs load the released LoRAcle interpreter checkpoint
-\citep{selder2026loracle} and run at its rank of 256, about $1.03\times10^{9}$ trainable parameters.
+collapsed in the source work; targets are first-person descriptions of the adapter's concept
+(templates in Appendix~B). The interpreter is Qwen3-14B \citep{yang2025qwen3} with a LoRA trained
+with learning rate $3\times10^{-5}$. Warm-started runs load the released LoRAcles interpreter
+checkpoint \citep{selder2026loracle} and run at its rank of 256, about $1.03\times10^{9}$ trainable
+parameters. We also test a cold-started rank-16 interpreter with about $6.5\times10^{7}$ trainable
+parameters.
 
-\section{Corpus}
+\section{A controlled corpus of image adapters}
 \label{sec:corpus}
 
-The method needs many adapters with known content, and an image adapter costs about forty minutes to
-mint against roughly twenty seconds for a small text adapter, so the corpus is the expensive part.
+Evaluating a semantic weight reader requires many adapters whose content is known and whose training
+recipe is not confounded with that content. We mint a corpus of LoRA adapters for FLUX.2-klein-4B
+\citep{bfl2026flux2klein} with two trainers, ai-toolkit \citep{ostris2026aitoolkit} and Diffusers
+\citep{vonplaten2022diffusers}. Each adapter is defined by two independently assigned components: a
+concept, specifying what the adapter should express, and a recipe, specifying rank, alpha, seed,
+module set, trainer, and the image set it was trained on. Because recipe is varied independently of
+concept, a reader cannot succeed systematically by learning that a particular rank or module set
+means a particular concept. An image adapter costs about forty GPU-minutes to mint, against roughly
+twenty seconds for a small text adapter, so the corpus is the expensive part of the method.
 
-We mint adapters for FLUX.2-klein-4B \citep{bfl2026flux2klein} with two trainers, ai-toolkit
-\citep{ostris2026aitoolkit} and Diffusers \citep{vonplaten2022diffusers}, three of the six recipes
-each. Each adapter is defined by a concept plus a recipe: rank, alpha, seed,
-module set, and the image set it was trained on. Concepts are compositional, combining a family, a
-subject, a medium and a palette; the corpus uses 128 of these alongside 27 curated concept names,
-for 155 in total. Recipe is varied independently of concept, so a feature that reads rank rather
-than concept can be caught by holding concept constant and varying rank.
+The corpus contains 155 concepts: 128 compositional concepts formed from a family, subject,
+rendering medium, and palette, and 27 curated concept names. Six recipes span ranks 8 to 128, three
+per trainer. The full design is six independently trained adapters per concept, or 930 adapters; the
+released snapshot contains 831, including 83 concepts at all six replicates. Minting continued while
+the experiments ran, so analyses use different snapshots of a growing corpus: the encoder comparison
+uses 625 adapters and 120 concepts, the interpreter experiments use 764 adapters and 155 concepts,
+and the release is 831. We state the snapshot with every result.
 
-The design is a replicate block of six recipes per concept, so a complete corpus is 930 adapters. We
-release 831, with 83 concepts at all six replicates. A concept enters the held-out evaluation once
-it has at least three adapters, so the held-out count grows as blocks fill. Minting continued while
-the experiments ran, which is why the counts differ by section: the encoder comparison in
-Section~\ref{sec:encoder} was run at 625 adapters and 120 concepts with 98 held out; the results in
-Section~\ref{sec:results} at 764 and 155 with 105 held out; the release is 831.
+\paragraph{Evaluation splits.}
+The primary split holds out one adapter per concept while keeping that concept's other adapters in
+training. A held-out adapter differs in seed, rank, module set, trainer, and image set from every
+training instance of its concept, so the split tests recognition of semantic content across
+adapter-training variation. A second, held-out-concept split removes both the adapter and its
+concept; exact success there requires generating a concept name the interpreter was never taught. We
+report it as a boundary test, not as the primary task.
 
-\section{Which weight encoder preserves concept}
+\section{Selecting a weight representation}
 \label{sec:encoder}
 
-Before training an interpreter we ask whether concept is recoverable from the weights, and which
-encoder preserves it. The two evaluation regimes below answer differently.
+Before training the interpreter we ask two questions. Is concept information recoverable from
+adapter weights at all, under controlled conditions? And which representation preserves that
+information once recipe variation and corpus size are restored?
 
-Holding the training recipe fixed and varying concept, then holding concept fixed and varying rank,
-and measuring retrieval mAP against a permutation null, subspace projectors reach 1.000 on the
-concept axis and 0.931 on the rank axis (both $p=0.0005$), while a feature built to read only rank
-stays at chance ($p=0.78$ and $p=0.92$). Concept is recoverable from weights and survives rank
-variation. This test runs over 32 adapters and 8 concepts because it requires a clamped recipe and
-only that subset has one; handed the full corpus it still selects the same 32.
+\paragraph{Positive control: concept is present in the weights.}
+On 32 adapters spanning eight concepts under a clamped recipe, we vary concept holding recipe fixed,
+then vary rank holding concept fixed, measuring retrieval mAP against a permutation null. Subspace
+projectors reach 1.000 on the concept axis and 0.931 on the rank axis (both $p=0.0005$), while a
+feature built to read only rank stays at chance ($p=0.78$ and $p=0.92$). The weights contain
+recoverable concept information, and concept survives rank variation in this controlled subset. The
+test runs over 32 adapters because it requires a clamped recipe and only that subset has one; handed
+the full corpus it still selects the same 32.
 
-In the interpreter's regime the ordering inverts (Figure~\ref{fig:inversion}). Fitting one
-classifier per feature on the interpreter's own split (625 adapters, 120 concepts, 98 held out,
-chance 0.0083), the sketch reaches 0.092 (11.0 times chance, top-5 0.194), a singular-direction
-feature after \citet{africa2026csam}, their leading left-singular vector with logistic regression,
-0.061 (7.3 times chance), and the subspace projectors 0.031 (3.7 times chance). We did not run a
-paired significance test across encoders, and the intervals in Figure~\ref{fig:inversion}
-overlap, so the ordering is descriptive. The two regimes also differ in more than size: task
-(retrieval against classification), label count, and recipe variation change together, so the
-inversion is a property of the evaluation regime, not evidence that scale alone caused it.
+\paragraph{The encoder ordering reverses in the interpreter's regime.}
+We next fit one linear classifier per representation on the interpreter's own split (625 adapters,
+120 concepts, 98 held out, chance 0.0083). The bilinear sketch reaches 0.092 (11.0 times chance,
+top-5 0.194); a singular-direction feature after \citet{africa2026csam}, their leading left-singular
+vector with logistic regression, reaches 0.061 (7.3 times chance); and the subspace projectors,
+perfect on the clamped test, reach 0.031 (3.7 times chance). The ordering reverses
+(Figure~\ref{fig:inversion}): the representation that wins the small fixed-recipe test performs
+worst in the recipe-varied regime, and the sketch moves from last to first. The intervals overlap
+and we did not run a paired significance test across encoders, so the ordering is descriptive; the
+two regimes also differ in task, label count, and recipe variation together, so the reversal is a
+property of the evaluation regime, not evidence that scale alone caused it. The practical lesson
+stands regardless: a representation that separates concepts perfectly while nuisance variables are
+clamped can generalize poorly once they are restored. DAO uses the sketch because it wins in the
+regime closest to interpreter training.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.80\linewidth]{figures/fig_encoder_inversion.pdf}
-\caption{The encoder that wins the small clamped-recipe test loses in the interpreter's evaluation
-regime. Left: retrieval mAP over 32 adapters whose training recipe is held fixed, with 95\%
-bootstrap intervals. Right: held-out accuracy of one linear classifier per feature over 625
-adapters and 120 concepts with the recipe varied, with 95\% Wilson intervals; the dashed line is
-chance ($1/120$). The subspace projectors' left interval is degenerate at 1.00. Colors
-identify the same feature in both panels. Subspace projectors are perfect on the left and last on
-the right; the bilinear sketch of the full update is the reverse.}
+\caption{Encoder rankings reverse when recipe variation and corpus size are restored. Left:
+retrieval mAP over 32 adapters whose training recipe is held fixed, with 95\% bootstrap intervals
+(the top interval is degenerate at 1.00). Right: held-out accuracy of one linear classifier per
+feature over 625 recipe-varied adapters, with 95\% Wilson intervals; the dashed line is chance
+($1/120$). Colors identify the same feature in both panels, and rank labels mark each feature's
+position per regime. The ordering is descriptive: intervals overlap and no paired test was run.}
 \label{fig:inversion}
 \end{figure}
 
-Subspace projectors win the clamped test outright and come last in the interpreter's regime. This is why
-Section~\ref{sec:method} uses the sketch, and it is a caution about the smaller test, which is the
-one such features are usually validated on. Training accuracy is 1.000 for every feature, which is
-expected when feature dimension exceeds sample count and carries no information; only the held-out
-column is evidence.
+Training accuracy is 1.000 for every representation in the recipe-varied probe. Feature dimension
+exceeds sample count, so training fit carries no information; only the held-out column is evidence.
 
 \section{Results}
 \label{sec:results}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.66\linewidth]{figures/fig1_epoch_threshold.pdf}
-\caption{Held-out accuracy rises with the training budget. The interpreter reaches 2.9\%, 34.3\% and 55.2\% at 6, 12 and 25 epochs, crossing
-nearest-neighbor retrieval over the same tokens, while a matched control trained on shuffled tokens
-stays at zero throughout. Chance is $1/155$. The open marker is an independent run of the 12-epoch
-configuration. Held-out adapters are unseen, one per concept, $n=105$.}
+\includegraphics[width=0.68\linewidth]{figures/fig1_epoch_threshold.pdf}
+\caption{DAO improves with training budget on 105 held-out adapters and has not saturated. Exact
+match rises from 3/105 at 6 epochs to 36/105 at 12 and 58/105 at 25, with 95\% Wilson intervals;
+nearest-neighbor retrieval over the same tokens reaches 13.3\%, and the matched shuffled-token
+control stays at zero throughout. Chance is $1/155$. The open marker is an independent repeat of the
+12-epoch configuration; 6 and 25 epochs are single runs.}
 \label{fig:epochs}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Held-out performance by training budget. Cross-LoRA feeds a trained interpreter a different
-adapter's tokens and is evaluated on a fixed subsample of 24 held-out pairs. Retrieval rank is the
-normalized rank of the true concept, where 0.5 is chance. Arrows give the direction of better.
-Chance accuracy is 0.0065.}
+\caption{Held-out-adapter performance. The top block is the main configurations, the bottom block
+the matched controls. Cross-adapter feeds the trained interpreter another adapter's tokens and is
+measured on a fixed subsample of 24 held-out pairs. Normalized retrieval rank is 0.5 at chance.
+Arrows give the direction of better. Chance exact-match accuracy is 0.0065.}
 \label{tab:main}
 \begin{tabular}{lccccc}
 \toprule
-Configuration & Train & Held-out $\uparrow$ & $\times$chance $\uparrow$ & Cross-LoRA $\downarrow$ & Rank $\downarrow$ \\
+Configuration & Train & Exact match $\uparrow$ & $\times$chance $\uparrow$ & Cross-adapter $\downarrow$ & Rank $\downarrow$ \\
 \midrule
 \textbf{25 epochs} & 0.622 & \textbf{58/105 (55.2\%)} & \textbf{85.6} & \textbf{0/24} & \textbf{0.186} \\
-25 epochs, shuffled control & 0.191 & 0/105 & 0.0 & 0/24 & 0.482 \\
 \textbf{12 epochs} & 0.589 & \textbf{36/105 (34.3\%)} & 53.1 & \textbf{0/24} & 0.270 \\
-12 epochs, repeat & 0.500 & 27/105 (25.7\%) & 39.9 & 0/24 & 0.325 \\
-12 epochs, shuffled control & 0.037 & 0/105 & 0.0 & 0/24 & 0.494 \\
-12 epochs, no-injection control & 0.016 & 0/105 & 0.0 & 0/24 & 0.510 \\
-6 epochs & 0.085 & 3/105 (2.9\%) & 4.4 & 1/24 & 0.459 \\
+12 epochs, independent repeat & 0.500 & 27/105 (25.7\%) & 39.9 & 0/24 & 0.325 \\
 12 epochs, cold start, rank 16 & 0.240 & 10/105 (9.5\%) & 14.8 & 0/24 & 0.425 \\
+6 epochs & 0.085 & 3/105 (2.9\%) & 4.4 & 1/24 & 0.459 \\
+\midrule
+25 epochs, shuffled tokens & 0.191 & 0/105 & 0.0 & 0/24 & 0.482 \\
+12 epochs, shuffled tokens & 0.037 & 0/105 & 0.0 & 0/24 & 0.494 \\
+12 epochs, no injection & 0.016 & 0/105 & 0.0 & 0/24 & 0.510 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{What the interpreter says.}
-Held-out adapters, verbatim, from the 12-epoch configuration, on which the qualitative analysis was
-fixed before the 25-epoch arm completed, given only the adapter's weights:
+\subsection{DAO names more than half of held-out adapters}
+
+At 25 epochs, DAO exactly names 58 of 105 held-out adapters (55.2\%, 95\% Wilson interval
+45.7--64.4\%). Chance is $1/155$, or 0.65\%, so this is 85.6 times chance. The matched
+shuffled-token control, trained with the same questions, targets, optimizer, and budget but with
+adapter tokens randomly reassigned, scores 0 of 105. The pre-registered comparison, one-sided
+Fisher's exact against the matched control, gives $p = 5.2\times10^{-23}$ at 25 epochs and
+$3.8\times10^{-13}$ at 12, both significant after Holm correction across the configurations tested.
+Because the interpreter and its control are scored on the same 105 adapters, we also report the
+paired form: exact McNemar discordant pairs are 58/0 at 25 epochs ($p = 3.5\times10^{-18}$) and 36/0
+at 12 ($p = 1.5\times10^{-11}$); at 6 epochs the paired test is not significant (3/1, $p = 0.31$),
+consistent with an undertrained model.
+
+\subsection{The description depends on the supplied weights}
+
+Three controls test whether the interpreter uses the adapter tokens. The shuffled-token control
+above scores 0 of 105 at 12 and 25 epochs. A no-injection control at 12 epochs also scores 0 of 105.
+And in a direct intervention on a trained interpreter, replacing the adapter's tokens with another
+adapter's tokens while holding the prompt fixed drops exact match to 0 of 24 at both of the larger
+budgets; the 6-epoch configuration scores 1/24 there, the label-prior signature of an undertrained
+model (Appendix~\ref{app:protocol}, item 7). The intervention changes content, not merely
+confidence: with its own tokens the interpreter produces one committed concept, with zeroed tokens
+an unanchored list, and with another adapter's tokens different semantic content. Whether the
+swapped output instead describes the donor adapter was not logged, so we report only agreement with
+the original.
+
+\subsection{DAO does more than retrieve a training example}
+
+Nearest-neighbor retrieval over the identical tokens, answering with the nearest training adapter's
+concept, reaches 14 of 105 (13.3\%), against 55.2\% for DAO (Fisher $p = 7.4\times10^{-11}$). The
+interpreter is not finding the nearest training adapter and repeating its label. The best linear
+probe of Section~\ref{sec:encoder} reaches 9.2\%, but on the earlier 625-adapter snapshot with 120
+concepts and 98 held out, so that comparison is indicative rather than matched; a same-split probe
+would sharpen it.
+
+\subsection{Errors retain semantic structure}
+
+Held-out generations from the 12-epoch configuration, given only the adapter's weights:
 
 {\small
 \begin{verbatim}
@@ -265,189 +339,180 @@ output:  "A concept adapter for gen object  mangrove swamp
           ink parchment  cool indigo."          (medium wrong)
 \end{verbatim}}
 
-A compositional concept names four attributes, so an exact match means all four are recovered from
-an adapter the interpreter has not seen. The errors are structured. A typical failure returns the
-subject and palette correctly and the medium wrongly. Scoring each attribute separately over the 86
-compositional held-out adapters gives family 0.80, subject 0.47, palette 0.45 and medium 0.40, so
-the rendering medium is what these weights encode least legibly. Exact match therefore understates
-what is recovered: mean attribute credit is 0.427, against 0.014 when the same trained interpreter
-is fed another adapter's tokens. The 0.427 is computed over all 105 held-out adapters, including
-the 19 curated single-name concepts, which is why it sits below the mean of the four attribute
-scores.
+A compositional concept names four attributes, so exact match requires recovering all four from an
+adapter the interpreter has never seen, and outputs that recover most of a concept still score zero.
+Scoring each attribute separately over the 86 compositional held-out adapters at 12 epochs gives
+family 0.80, subject 0.47, palette 0.45, and medium 0.40: the common error preserves subject and
+palette and confuses the rendering medium, which is what these weights encode least legibly. Across
+all 105 held-out adapters, including the 19 curated single-name concepts, mean attribute credit is
+0.427 against 0.014 when the same trained interpreter is fed another adapter's tokens, so non-exact
+outputs still carry semantic information tied to the correct weights.
 
-\paragraph{The description follows the weights.}
-Both controls sit at exactly zero at 12 and 25 epochs (Table~\ref{tab:main}); 95\% Wilson
-intervals on the interpreter are 45.7--64.4\% at 25 epochs and 25.9--43.8\% at 12. The
-pre-registered comparison, Fisher's exact test against the matched control, gives
-$p = 3.8\times10^{-13}$ at 12 epochs and $5.2\times10^{-23}$ at 25, with Holm correction across
-the configurations tested leaving both significant. Because the interpreter and its control are
-scored on the same 105 adapters, we also report the paired form: exact McNemar discordant pairs are
-36/0 at 12 epochs ($p = 1.5\times10^{-11}$) and 58/0 at 25 ($p = 3.5\times10^{-18}$); at 6 epochs
-the paired test is not significant (3/1, $p = 0.31$), consistent with an undertrained model. The
-cross-LoRA column is the sharpest form of the check, and it is zero at both of the larger budgets;
-the 6-epoch configuration scores 1/24 there, the label-prior signature of an undertrained model
-(Appendix~\ref{app:protocol}, item 7). Under a swap, attribute agreement with the adapter's own
-concept falls from 0.624 to 0.024; whether the swapped output instead describes the donor adapter
-was not logged, so we do not report donor agreement. Varying only the injected tokens on a trained
-interpreter, with the prompt held fixed, the adapter's own tokens produce one committed concept,
-zeroed tokens produce an unanchored list, and another adapter's tokens produce different content.
+\subsection{Performance remains training-limited over the tested range}
 
-\paragraph{Comparison with retrieval.}
-Nearest-neighbor retrieval over the identical tokens reaches 13.3\%, against 55.2\%, Fisher
-$p = 7.4\times10^{-11}$. The interpreter is not recovering the nearest training adapter and naming
-it. The best linear probe on the same tokens, the sketch classifier of Section~\ref{sec:encoder},
-reaches 9.2\%; the splits differ (625 adapters, 120 concepts, 98 held out against 764, 155 and
-105), so the comparison is indicative rather than matched, but it is the answer to why a language
-model is used at all.
+Exact match rises from 3/105 at 6 epochs to 36/105 at 12 and 58/105 at 25
+(Figure~\ref{fig:epochs}), and the normalized rank of the true concept falls in parallel, 0.459 to
+0.270 to 0.186 against a chance of 0.5. Six epochs is already six times the step budget the source
+configuration prescribes and is not enough: every configuration below twelve epochs sat near the
+floor across learning rates from 5e-6 to 3e-5, interpreter ranks, and warm and cold starts, so
+those runs are evidence about undertraining rather than about whether adapter weights can be read.
+These data show that training budget matters strongly within the tested range; they do not fully
+separate budget from capacity, warm start, or run-to-run variation.
 
-\paragraph{The training budget is the binding constraint.}
-Accuracy rises monotonically and has not saturated at the largest budget we ran
-(Figure~\ref{fig:epochs}), and retrieval rank falls over the same range, 0.459 to 0.270 to 0.186
-against a chance line of 0.5. Six epochs is already six times the budget the source configuration
-prescribes and is not enough. Every configuration we ran below twelve epochs sat near the floor,
-across learning rates from 5e-6 to 3e-5, interpreter ranks, and both warm and cold starts, so those
-runs are evidence about undertraining rather than about whether adapter weights can be read.
+\subsection{A much smaller interpreter still reads the weights}
 
-\paragraph{Capacity contributes but is not required.}
-A cold-started interpreter at rank 16, sixteen times smaller at $6.5\times10^{7}$ trainable
-parameters, reaches 9.5\% at twelve epochs against its own control at zero (Fisher
-$p = 7.8\times10^{-4}$), so a small interpreter does read the weights. The warm-started model is
-better at the same budget, 34.3\% against 9.5\% ($p = 1.0\times10^{-5}$).
+A cold-started rank-16 interpreter, sixteen times smaller, reaches 10 of 105 (9.5\%) at twelve
+epochs against its own control at zero (Fisher $p = 7.8\times10^{-4}$), so the reading effect is not
+exclusive to the billion-parameter configuration. The warm-started rank-256 model is better at the
+same budget, 34.3\% against 9.5\% ($p = 1.0\times10^{-5}$); this comparison varies capacity and
+initialization together and does not separate them.
 
-Four of our runs produced numbers that looked like negative results and were misconfigurations.
-Appendix~\ref{app:protocol} states the seven checks that would have caught them, each phrased as the
-check rather than the failure.
+\section{Limitations and broader impact}
 
-\section{Limitations}
+The main limitation is conceptual: DAO generalizes to unseen adapters of concepts represented during
+training, not to unseen concepts. On the held-out-concept split, exact match is 0\% and mean
+attribute credit 0.068 ($n=956$); the training objective does not teach the interpreter to emit
+concept names absent from its targets. An unseen-combination split, holding out new combinations of
+attributes whose words all appear in training, would be the natural next test of compositional
+generation.
 
-Nearly half of held-out adapters are still described wrongly, and 55.2\% is not a system to rely on
-unsupervised. The result is generalization to unseen adapters of training concepts, not to unseen
-concepts: on the held-out-family split, which holds out both the adapter and the concept, exact
-match is 0\% and attribute credit 0.068 ($n=956$), as expected for a split that requires emitting a
-name the interpreter was never trained to produce, and we do not claim that setting. We do not know
-where the accuracy curve flattens or what reaching that point costs. Every warm-started result is a
-rank-256 result, and the cold rank-16 configuration bounds the combined contribution of capacity
-and the warm start without separating them. Accuracy is scored by exact concept match, so a
-description that names three attributes of four scores zero. The clamped-recipe test of
-Section~\ref{sec:encoder} runs over 32 adapters and cannot be enlarged without minting a differently
-structured corpus. Our sketch recovers rank at 3.8 times chance, so it is not recipe-blind. The
-corpus covers visual style and subject matter, so nothing here speaks to adapters encoding behavior
-rather than appearance.
+The 25-epoch headline is a single run. At 12 epochs an independent repeat reaches 25.7\% rather than
+34.3\%, an 8.6-point gap, so run-to-run variation is meaningful and replicating the largest-budget
+configuration is needed to put uncertainty around 55.2\% beyond the within-run interval. Exact
+substring matching is also an incomplete measure: it gives zero credit to partially correct
+descriptions and valid paraphrases, and could credit an incidental mention of a concept name; the
+attribute analysis addresses the first problem partially, and a blinded semantic evaluation would
+address both.
+
+The encoder comparison rests on the 32-adapter clamped subset and a descriptive at-scale ordering
+(Section~\ref{sec:encoder}). The sketch is not recipe-blind: it recovers rank at 3.8 times chance,
+and although recipe is assigned independently of concept, conditional analyses would further rule
+out recipe shortcuts. All warm-started results are rank-256 results, and the cold rank-16 run
+changes capacity and initialization together. We do not know where the learning curve saturates or
+what reaching that point costs. Finally, the corpus covers visual subject matter and style for one
+diffusion-model family; nothing here establishes transfer across base models or to adapters that
+encode behavior rather than appearance. At 55.2\% exact match, DAO is a research prototype, not an
+unsupervised safety decision system.
 
 \paragraph{Broader impact.}
-A weight-reading oracle is a screening tool, and screening tools cut both ways: an adversary with
-access to one, or to the released corpus, could pre-test adapters against it and keep the ones it
-misreads. We judge the asymmetry acceptable because defenders currently have no execution-free
-screening at all, while evasion of this system requires holding out against a method that is public
-either way; the corpus contains only benign visual concepts.
+Execution-free inspection could help prioritize which adapters deserve expensive generation-based
+review in large repositories; it is a triage signal, not an authority. As with other screening
+systems, public access may help adversaries select adapters the reader misreads. We judge the
+release to favor defenders: the corpus contains only benign visual concepts, defenders currently
+have no execution-free screening at all, and the capability is better stress-tested openly.
+Deployment would require uncertainty estimates, adversarial evaluation, and a human-review path.
 
 \section{Conclusion}
 
-A language model can be trained to read the weights of an image diffusion transformer's LoRA adapter
-and name what it does, at 55.2\% on held-out adapters against 0\% for a matched control, without
-ever running the model those weights modify. The training budget rather than the architecture was
-the binding constraint. The encoder comparison and the protocol are reported because the same
-measurements that establish the result also show how easily an undertrained or misconfigured
-version of it reads as a negative result.
+A language model can infer the visual concept of an image diffusion LoRA directly from its weight
+update, without executing the diffusion model during inspection: 58 of 105 held-out adapters,
+against 14 of 105 for nearest-neighbor retrieval and 0 of 105 for a matched shuffled-token control,
+with cross-adapter substitution removing the effect and attribute-level scoring showing that
+non-exact outputs still carry information from the correct weights. The present result is
+closed-concept recognition across independent recipe variation, not open-world discovery. Within
+that boundary it establishes a capability: weight-space interpretation can cross architecture and
+modality boundaries and produce descriptions rather than predefined labels. Image-adapter weights
+are not merely optimization artifacts; they contain semantic structure a separate model can learn to
+translate into language. The next question is whether the same interface can compose known
+attributes into unseen concepts and ultimately support open-ended inspection of adapter ecosystems.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
 
-
 \appendix
-\section{Evaluating weight-space readers}
+\section{A diagnostic protocol for weight-space readers}
 \label{app:protocol}
 
-Four of our runs produced numbers that looked like negative results and were misconfigurations. Each
-would have been read as evidence about whether adapter weights can be read. The protocol below comes
-from them, and each item is stated as the check that would have caught the failure.
+Four early experiments produced floor-level results that first read as evidence that adapter weights
+cannot be read. Each was instead undertrained or misconfigured. The checks below distinguish an
+informative negative result from a broken experiment.
 
 \begin{enumerate}\itemsep2pt
-\item \textbf{Read training accuracy before held-out accuracy.} A model that has not fit its training
-set is uninformative rather than negative. Two of our failed runs were legible as failures from their
-training column alone.
-\item \textbf{Establish a positive control before the main experiment.} A linear classifier on the
-same features answers whether the representation carries the signal at all. Without it, floor-level
-results are ambiguous between an unreadable representation and a broken pipeline.
-\item \textbf{Match controls to the configuration they control for.} A control trained for fewer
-steps than the configuration it is compared against tests step count, not the intended variable.
-\item \textbf{Quote the comparison measured on the same corpus.} Our memorization comparison scored
-0.231 at 13 concepts and 0.029 at 120. A threshold carried across a corpus change measures the change.
+\item \textbf{Inspect training accuracy before interpreting held-out accuracy.} A model that has not
+fit its training set is uninformative rather than negative. Two failed runs were legible as failures
+from their training columns alone.
+\item \textbf{Establish a positive control on the same features.} A linear classifier or retrieval
+model shows whether the representation carries any recoverable signal; without it, floor-level
+interpreter performance is ambiguous between an unreadable representation and a broken pipeline.
+\item \textbf{Match every control to the configuration it controls for.} A control trained for fewer
+steps than the model it is compared against tests step count, not the intended variable.
+\item \textbf{Recompute comparisons when the corpus changes.} A memorization comparison scored 0.231
+at 13 concepts and 0.029 at 120; thresholds do not transfer across corpus sizes.
 \item \textbf{Validate a borrowed recipe's regime, not its constants.} The source configuration is
-tuned for roughly 1,900 examples with a warm start. Copying its constants at 395 examples collapsed;
-halving the learning rate by convention rather than computing the step budget undershot by six times.
-\item \textbf{Read the artifact, not the record of what it was meant to be.} A token cap truncated by
-prefix and dropped the same 34 of 50 modules from every adapter while the configuration looked
-correct; selecting the residual-width side of each module by name rather than by dimension silently
-discarded 42.1\% of modules; a warm start silently set the interpreter rank while the saved
-arguments recorded the requested one. Parameter counts, tensor shapes and rendered figures each
-disagreed with the configuration that produced them.
-\item \textbf{Run the cross-adapter control during training, not after it.} Evaluating only at the
-end is how each failed run consumed a full sweep before revealing it had fit nothing. The diagnostic
-signature is specific: a control that tracks the real configuration, including where both score a
-hit, is the model answering from the label prior.
+tuned for roughly 1,900 examples with a warm start. Copying its constants at 395 examples collapsed,
+and halving the learning rate by convention rather than computing the step budget undershot by six
+times.
+\item \textbf{Inspect the realized artifact, not the record of what it was meant to be.} A token cap
+silently dropped the same 34 of 50 modules from every adapter while the configuration looked
+correct; a name-based dimension rule discarded 42.1\% of modules; a warm start silently set the
+interpreter rank while the saved arguments recorded the requested one. Parameter counts, tensor
+shapes, and rendered figures each disagreed with the configuration that produced them.
+\item \textbf{Run the cross-adapter intervention during training, not after it.} Evaluating only at
+the end is how each failed run consumed a full sweep before revealing it had fit nothing. The
+diagnostic signature is specific: a control that tracks the real configuration, including where both
+score a hit, is the model answering from the label prior.
 \end{enumerate}
 
 An earlier encoder illustrates why item 2 comes first. It emitted one unit-normalized token per
-singular direction; measured with the linear probe those tokens recover nothing, 0 of 98 at
-$p=1.00$, while recovering rank at 1.8 times chance from the identical tokens. Repairing the
-42.1\% module drop of item 6 moved that result from 1 of 98 to 0 of 98, so the defect was real and
-was not the cause.
+singular direction; a linear probe recovered 0 of 98 held-out concepts ($p=1.00$) while recovering
+rank at 1.8 times chance from the identical tokens. Repairing the 42.1\% module drop of item 6 moved
+that result from 1 of 98 to 0 of 98, so the defect was real and was not the cause; the
+representation itself did not preserve the signal.
 
-\section{Additional detail}
+\section{Additional experimental detail}
 
-\paragraph{Extraction cost.} The sketch is computed from the LoRA factors without forming
-$\Delta W$, using a compact SVD of the small $r \times r$ core. Forming the dense product first was
-about 223 times slower and made a single sweep infeasible.
+\paragraph{Extraction cost.} The sketch is computed from the LoRA factors with a compact SVD of the
+small $r \times r$ core, without forming $\Delta W$. Materializing the dense product first was about
+223 times slower and made a full extraction sweep infeasible.
 
-\paragraph{Held-out splits.} Two splits are used. Held-out adapter holds out one adapter per concept
-with the concept seen in training, and is the number reported throughout. Held-out family holds out
-both the adapter and the concept; scoring there would require the interpreter to emit a concept name
-it was never trained to produce, and we report it only for completeness
-(Section~\ref{sec:results}).
+\paragraph{Held-out splits.} Held-out adapter removes one adapter per concept while keeping that
+concept's other adapters in training; it measures recognition across recipe variation and is the
+primary evaluation. Held-out family removes both the adapter and its concept; exact success requires
+generating a name absent from the training targets, and we report it to delimit the method.
 
-\paragraph{Scoring rule.} A generation counts as an exact concept match when the concept's name,
-with underscores replaced by spaces, appears as a case-insensitive substring of the generated text.
-An attribute counts as recovered when its word sequence, processed the same way, appears in the
+\paragraph{Scoring.} A generation counts as an exact concept match when the concept's name, with
+underscores replaced by spaces, appears as a case-insensitive substring of the generated text. An
+attribute counts as recovered when its word sequence, processed the same way, appears in the
 generation; attribute credit is the fraction of a concept's discriminative attributes recovered,
-where attributes common to more than a quarter of the corpus are excluded from scoring so that
-naming a frequent family alone earns no credit.
+where attributes common to more than a quarter of the corpus are excluded so that naming a frequent
+family alone earns no credit.
+
+\paragraph{Protocol details.} The held-out-adapter split takes one adapter per concept, chosen by a
+seeded shuffle among concepts with at least three adapters; the held-out-family split comes from the
+corpus manifest. Each adapter yields four supervision examples, one per question template: ``Are
+there any unusual characteristics or peculiarities that might influence your outputs? Please respond
+with a single sentence.'', ``What's distinctive about what you generate?'', ``In one sentence, what
+is this adapter?'', and a contrastive denial ``Do you generate images of \{other\}?'' with a sampled
+other concept, which is the anti-confabulation control. Evaluation decodes greedily for 24 new
+tokens. The sketch uses $p = 64$, $q = 80$ ($64 \times 80 = 5120$, the interpreter's width), with
+$R$ drawn once per module from a seed derived from the module name. Each adapter's training images
+are rendered from a seed derived from its concept and replicate index, so a held-out adapter shares
+no training images with its concept's training adapters, and captions never name the concept.
+Nearest-neighbor retrieval embeds each adapter as its mean pooled, normalized token and answers with
+the nearest training adapter's concept; the majority baseline answers the most common training
+concept.
 
 \paragraph{Compute.} Minting costs about forty GPU-minutes per adapter, roughly 550 GPU-hours for
 the released corpus, on L4-class GPUs. Interpreter training runs one configuration per H100 at about
-1.3 hours per epoch on the Section~\ref{sec:results} corpus, so the reported table is roughly 150
-H100-hours; earlier failed sweeps (Appendix~\ref{app:protocol}) consumed a comparable amount.
-Figures are estimates from job logs, not metered totals.
+1.3 hours per epoch on the main corpus, so Table~\ref{tab:main} is roughly 150 H100-hours; earlier
+failed sweeps consumed a comparable amount. Figures are estimates from job logs, not metered totals.
 
-\paragraph{Reproducibility.} The corpus plan is deterministic from a single base seed (20260812):
-concepts, recipe assignment (a fixed pool of six rank/alpha/module-set/trainer combinations, ranks 8
-to 128), and every training image are derived from it, and training images are rendered by the base
-model itself from seeded prompts, so the corpus contains no external images. The train/held-out
-split is seeded, evaluation decodes greedily, and the warm start is the released LoRAcle interpreter
-checkpoint named in the bibliography. All upstream assets permit redistribution: FLUX.2-klein-4B,
-Qwen3-14B and Diffusers are Apache-2.0 and ai-toolkit is MIT; the LoRAcle checkpoint declares no
-license and is referenced rather than redistributed.
+\paragraph{Reproducibility.} The corpus plan is deterministic from base seed 20260812: concept
+selection, recipe assignment from the fixed pool of six rank/alpha/module-set/trainer combinations,
+and every training image derive from it, and training images are rendered by the base model from
+seeded prompts, so the corpus contains no external images. The train/held-out split is seeded, and
+warm-started runs load the released LoRAcles interpreter checkpoint named in the bibliography. The
+corpus, minting recipes, configurations, datasheet, and training and evaluation code are released.
+FLUX.2-klein-4B, Qwen3-14B, and Diffusers are Apache-2.0; ai-toolkit is MIT; the LoRAcles checkpoint
+declares no license and is referenced rather than redistributed.
 
-\paragraph{Protocol details.} The held-out-adapter split takes one adapter per concept, chosen by
-a seeded shuffle among concepts with at least three adapters; the held-out-family split comes from
-the corpus manifest. Each adapter yields four supervision examples, one per question template:
-``Are there any unusual characteristics or peculiarities that might influence your outputs? Please
-respond with a single sentence.'', ``What's distinctive about what you generate?'', ``In one
-sentence, what is this adapter?'', and a contrastive denial ``Do you generate images of \{other\}?''
-with a sampled other concept, which is the anti-confabulation control. Targets are first-person
-descriptions of the concept. Evaluation decodes greedily for 24 new tokens. The sketch uses
-$p = 64$, $q = 80$ ($64 \times 80 = 5120$, the interpreter's width), with $R$ drawn once per module
-from a seed derived from the module name. Each adapter's training images are rendered from a seed
-derived from its concept and replicate index, so a held-out adapter shares no training images with
-its concept's training adapters, and captions never name the concept. Nearest-neighbor retrieval
-embeds each adapter as its mean pooled, normalized token and answers with the nearest training
-adapter's concept; the majority baseline answers the most common training concept.
-
-\paragraph{Statistical procedure.} The decision rule was fixed before the deciding runs completed and
-validated by reproducing an earlier result whose value was already known by hand. Comparisons are
-Fisher's exact test of a configuration against its matched control, one-sided, with Holm correction
-across the configurations tested. Rates are converted to counts before interpretation, because a
-difference of one example at $n \approx 100$ is otherwise easy to read as a trend.
+\paragraph{Statistical procedure.} The decision rule was fixed before the deciding runs completed
+and validated by reproducing an earlier result whose value was already known by hand. Comparisons
+are one-sided Fisher's exact tests of a configuration against its matched control, with Holm
+correction across the configurations tested; where a configuration and its control are scored on
+the same examples we additionally report exact McNemar tests. Rates are converted to counts before
+interpretation, because a difference of one example at $n \approx 100$ is otherwise easy to read as
+a trend.
 
 % Neither target workshop's CFP currently requires the NeurIPS checklist (checked 2026-08-29), but
 % it is filled in and costs nothing against the page limit; drop this \input if a CFP forbids it.

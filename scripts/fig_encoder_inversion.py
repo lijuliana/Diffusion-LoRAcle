@@ -25,6 +25,10 @@ LABELS = {"subspace_proj": "Subspace projectors",
 INK2 = "#52514e"
 
 
+def _ord(k):
+    return {1: "1st", 2: "2nd", 3: "3rd"}[k]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--clamped", default="results/workshop_encoder_comparison.json")
@@ -48,6 +52,9 @@ def main() -> None:
         axL.plot(r["mAP"], yi, "o", color=COLORS[f])
         axL.annotate(f"{r['mAP']:.2f}", (r["mAP"], yi), textcoords="offset points",
                      xytext=(0, 5), ha="center", fontsize=7, color=INK2)
+        rankL = 1 + sum(concept_axis["featurizers"][g]["mAP"] > r["mAP"] for g in feats if g != f)
+        axL.annotate(_ord(rankL), (r["mAP"], yi), textcoords="offset points",
+                     xytext=(0, -13), ha="center", fontsize=6.2, color=INK2)
     axL.set_xlim(0, 1.09)
     axL.set_xlabel("Retrieval mAP (clamped recipe)")
     axL.set_yticks(y)
@@ -69,6 +76,9 @@ def main() -> None:
         axR.plot(r["heldout"], yi, "o", color=COLORS[f])
         axR.annotate(f"{r['heldout']:.3f} ({r['x_chance']:.1f}$\\times$)", (r["heldout"], yi),
                      textcoords="offset points", xytext=(0, 5), ha="center", fontsize=7, color=INK2)
+        rankR = 1 + sum(atscale["features"][g]["heldout"] > r["heldout"] for g in feats if g != f)
+        axR.annotate(_ord(rankR), (r["heldout"], yi), textcoords="offset points",
+                     xytext=(0, -13), ha="center", fontsize=6.2, color=INK2)
     axR.axvline(ch, color="#c4c4c4", lw=0.8, ls=(0, (4, 3)), zorder=0)
     axR.annotate("chance", (ch, y[-1] - 0.42), fontsize=7, color=INK2, ha="left",
                  xytext=(3, 0), textcoords="offset points")

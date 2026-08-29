@@ -78,15 +78,26 @@ def main() -> None:
     # Place each reference label where the interpreter line is not: chance sits low on the left,
     # the memorisation line is crossed early so its label goes to the right of the crossing.
     for y, lab, col, xt, ha in ((chance, "Chance", FAINT, 0.6, "left"),
-                                (nearest, "Nearest-neighbour retrieval", MUTED, 25.4, "right")):
+                                (nearest, "Nearest-neighbor retrieval", MUTED, 25.4, "right")):
         if y:
             ax.axhline(y, color=col, lw=0.9, ls=(0, (4, 3)), zorder=1)
             ax.text(xt, y + 0.012, lab, va="bottom", ha=ha, fontsize=6.2, color=MUTED)
 
     if real_pts:
         xs, ys = zip(*real_pts)
+        # 95% Wilson intervals from the hit counts; counts labelled at each point.
+        z = 1.959964
+        for x, yv in real_pts:
+            k = round(yv * n)
+            ph = k / n
+            c = (ph + z * z / (2 * n)) / (1 + z * z / n)
+            h = (z / (1 + z * z / n)) * ((ph * (1 - ph) / n + z * z / (4 * n * n)) ** 0.5)
+            ax.vlines(x, c - h, c + h, color=REAL, lw=1.1, alpha=0.65, zorder=2)
+            dx, dy, ha = (-0.7, 0.012, "right") if x < 25 else (-1.0, -0.028, "right")
+            ax.text(x + dx, yv + dy, f"{k}/{n}", color=REAL, fontsize=6.2, ha=ha,
+                    va="bottom" if dy > 0 else "top")
         ax.plot(xs, ys, "-o", color=REAL, lw=1.6, ms=5, zorder=3, clip_on=False)
-        ax.text(xs[-1], ys[-1] + 0.030, "Interpreter", color=REAL, fontsize=7.5,
+        ax.text(xs[-1], ys[-1] + 0.045, "Interpreter", color=REAL, fontsize=7.5,
                 ha="right", fontweight="bold")
     if rep is not None:
         ax.plot([12], [rep], "o", color=REAL, ms=5, mfc="white", mew=1.4, zorder=3)
