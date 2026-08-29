@@ -29,7 +29,7 @@ images. We ask whether the adapter's weight update alone carries enough semantic
 separate language model to describe the adapter, without executing the diffusion model at inspection
 time. The diffusion adapter oracle (DAO) converts each module's low-rank update into a
 symmetry-preserving token and injects the token sequence into a language-model interpreter that
-shares no architecture, width, or token vocabulary with the diffusion model; only
+operates in a different architecture and residual space from the diffusion model; only
 interpreter-side parameters are trained. DAO names the concept of 58 of 105 held-out adapters (55.2\%, 85.6 times chance), against
 14 of 105 (13.3\%) for nearest-neighbor retrieval over the same tokens and 0 of 105 for a matched
 interpreter trained on shuffled tokens. As a causal check, substituting another adapter's tokens at
@@ -39,7 +39,7 @@ trained, with rank, seed, module set, trainer, and image set varied independentl
 evaluation tests recognition of trained concepts across recipe variation, not unseen concept names.
 Point estimates rise through the largest training budget we ran, with no visible plateau. Within
 this scope, visual semantics can be decoded directly from diffusion-adapter weights and verbalized
-across an architecture and modality boundary. We release the corpus the method needs: 831 controlled
+across model architectures, from image-generator weights into language. We release the corpus the method needs: 831 controlled
 adapters over 155 concepts, with their minting recipes.
 \end{abstract}
 
@@ -104,10 +104,10 @@ and is computed from the low-rank factors without materializing the dense update
 \item We release a controlled corpus of 831 minted adapters, each trained from scratch, over 155
 concepts with training recipe varied independently of concept, together with the mint recipes
 (Section~\ref{sec:corpus}).
-\item We show that encoder rankings can differ between a small fixed-recipe test and the larger
-recipe-varied regime an interpreter operates in (Section~\ref{sec:encoder}), and we provide a
-diagnostic protocol separating negative results from undertraining or pipeline failure
-(Appendix~\ref{app:protocol}).
+\item We provide a diagnostic protocol separating negative results from undertraining or pipeline
+failure, and report as a secondary finding that encoder rankings can differ between a small
+fixed-recipe test and the recipe-varied regime an interpreter operates in
+(Appendices~\ref{app:protocol} and~\ref{app:encoder}).
 \end{enumerate}
 
 \section{Diffusion adapter oracles}
@@ -155,8 +155,8 @@ where $R_{\text{out},m} \in \mathbb{R}^{d_{\text{out}} \times p}$ and $R_{\text{
 \mathbb{R}^{d_{\text{in}} \times q}$ are fixed, seeded projections shared by every adapter. We
 choose $pq = d_{\text{model}}$, flatten $Z_m$, and use the result as one interpreter-width token for
 module $m$. Because the sketch is a function of $\Delta W_m$ rather than of the factors separately,
-it is invariant to the full GL($r$) gauge and to coupled sign flips by construction, with no
-canonicalization step to get wrong. It is computed from a compact SVD of the low-rank factors as
+it is invariant to the full GL($r$) gauge and to coupled sign flips by construction, without
+requiring canonicalization. It is computed from a compact SVD of the low-rank factors as
 $(R_{\text{out}}^\top U)\,\mathrm{diag}(\sigma)\,(V^\top R_{\text{in}})$, without forming the dense
 update.
 
@@ -205,52 +205,9 @@ adapter-training variation. A second, held-out-concept split removes both the ad
 concept; exact success there requires generating a concept name the interpreter was never taught. We
 report it as a boundary test, not as the primary task.
 
-\section{Selecting a weight representation}
-\label{sec:encoder}
-
-Before training the interpreter we ask two questions. Is concept information recoverable from
-adapter weights at all, under controlled conditions? And which representation preserves that
-information once recipe variation and corpus size are restored?
-
-\paragraph{Positive control: concept is present in the weights.}
-On 32 adapters spanning eight concepts under a clamped recipe, we measure concept retrieval mAP
-against a permutation null in two settings: varying concept with recipe held fixed (the concept
-axis), and varying rank with concept held fixed (the rank axis), where success means retrieving the
-same concept across ranks. Subspace projectors reach 1.000 on the concept axis and 0.931 on the rank
-axis (both $p=0.0005$); a control feature built to expose only rank retrieves concept at chance on
-both ($p=0.78$ and $p=0.92$). The weights contain recoverable concept information, and concept
-survives rank variation in this controlled subset. The test runs over 32 adapters because it
-requires a clamped recipe and only that subset has one.
-
-\paragraph{The recipe-varied probe favors a different encoder.}
-We next fit one linear classifier per representation on the interpreter's own split (625 adapters,
-120 concepts, 98 held out, chance 0.0083). The bilinear sketch reaches 0.092 (11.0 times chance,
-top-5 0.194); a singular-direction feature after \citet{africa2026csam}, their leading left-singular
-vector with logistic regression, reaches 0.061 (7.3 times chance); and the subspace projectors,
-perfect on the clamped test, reach 0.031 (3.7 times chance). The ordering reverses
-(Figure~\ref{fig:inversion}): the representation that wins the small fixed-recipe test performs
-worst in the recipe-varied regime, and the sketch moves from last to first. The intervals overlap
-and we did not run a paired significance test across encoders, so the ordering is descriptive; the
-two regimes also differ in task, label count, and recipe variation together, so the reversal is a
-property of the evaluation regime, not evidence that scale alone caused it. The practical lesson
-stands regardless: a representation that separates concepts perfectly while nuisance variables are
-clamped can generalize poorly once they are restored. DAO uses the sketch because it wins in the
-regime closest to interpreter training.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.80\linewidth]{figures/fig_encoder_inversion.pdf}
-\caption{Encoder rankings reverse when recipe variation and corpus size are restored. Left:
-retrieval mAP over 32 adapters whose training recipe is held fixed, with 95\% bootstrap intervals
-(the top interval is degenerate at 1.00). Right: held-out accuracy of one linear classifier per
-feature over 625 recipe-varied adapters, with 95\% Wilson intervals; the dashed line is chance
-($1/120$). Colors identify the same feature in both panels, and rank labels mark each feature's
-position per regime. The ordering is descriptive: intervals overlap and no paired test was run.}
-\label{fig:inversion}
-\end{figure}
-
-Training accuracy is 1.000 for every representation in the recipe-varied probe. Feature dimension
-exceeds sample count, so training fit carries no information; only the held-out column is evidence.
+Appendix~\ref{app:encoder} compares alternative encoders. We use the bilinear sketch because it
+gives the strongest held-out concept probe in a recipe-varied evaluation matched to interpreter
+training.
 
 \section{Results}
 \label{sec:results}
@@ -260,7 +217,7 @@ exceeds sample count, so training fit carries no information; only the held-out 
 \includegraphics[width=0.68\linewidth]{figures/fig1_epoch_threshold.pdf}
 \caption{DAO improves with training budget on 105 held-out adapters, with no visible plateau.
 Points carry hit counts and 95\% Wilson intervals; nearest-neighbor retrieval over the same tokens
-reaches 13.3\%, and the matched shuffled-token control stays at zero. Chance is $1/155$. The open
+reaches 13.3\%, and the matched shuffled-token control stays at zero. Uniform-label chance is $1/155$. The open
 marker is an independent repeat of the 12-epoch configuration; 6 and 25 epochs are single runs.}
 \label{fig:epochs}
 \end{figure}
@@ -270,8 +227,9 @@ marker is an independent repeat of the 12-epoch configuration; 6 and 25 epochs a
 \caption{Held-out-adapter performance. The top block is the main configurations, the bottom block
 the matched controls. Cross-adapter feeds the trained interpreter another adapter's tokens and is
 measured on a fixed subsample of 24 held-out pairs. Normalized retrieval rank is 0.5 at chance.
-Arrows give the direction of better. Chance exact-match accuracy is 0.0065.}
+Arrows give the direction of better. Uniform-label chance is 0.0065.}
 \label{tab:main}
+\small
 \begin{tabular}{lccccc}
 \toprule
 Configuration & Train & Exact match $\uparrow$ & $\times$chance $\uparrow$ & Cross-adapter $\downarrow$ & Rank $\downarrow$ \\
@@ -323,7 +281,7 @@ adapter's concept, reaches 14 of 105 (13.3\%), against 55.2\% for DAO (unpaired 
 $p = 7.4\times10^{-11}$; per-example retrieval predictions were not retained, so no paired test is
 possible); the majority baseline, always answering the most common training concept, reaches 1.0\%.
 Retrieval is weak evidence about what the language model adds, and the best linear probe of
-Section~\ref{sec:encoder} (9.2\%) was fit on the earlier 625-adapter snapshot with 120 concepts
+Appendix~\ref{app:encoder} (9.2\%) was fit on the earlier 625-adapter snapshot with 120 concepts
 and 98 held out, so that comparison is indicative rather than matched; a probe on the main split is
 the missing control.
 
@@ -366,13 +324,8 @@ $3\times10^{-5}$, interpreter ranks, and warm and cold starts, so those runs are
 undertraining rather than about whether adapter weights can be read. These data do not separate
 budget from capacity, warm start, or run-to-run variation.
 
-\subsection{A much smaller interpreter still reads the weights}
-
-A cold-started rank-16 interpreter, sixteen times smaller, reaches 10 of 105 (9.5\%) at twelve
-epochs against its own control at zero (Fisher $p = 7.8\times10^{-4}$), so the reading effect is not
-exclusive to the billion-parameter configuration. The warm-started rank-256 model is better at the
-same budget, 34.3\% against 9.5\% ($p = 1.0\times10^{-5}$); this comparison varies capacity and
-initialization together and does not separate them.
+A 16$\times$ smaller cold-started interpreter remains above its matched control
+(Appendix~\ref{app:capacity}).
 
 \section{Limitations and broader impact}
 
@@ -393,7 +346,7 @@ attribute analysis addresses the first problem partially, and a blinded semantic
 address both.
 
 The encoder comparison rests on the 32-adapter clamped subset and a descriptive at-scale ordering
-(Section~\ref{sec:encoder}). The sketch is not recipe-blind: it recovers rank at 3.8 times chance,
+(Appendix~\ref{app:encoder}). The sketch is not recipe-blind: it recovers rank at 3.8 times chance,
 and although recipe is assigned independently of concept, conditional analyses would further rule
 out recipe shortcuts. All warm-started results are rank-256 results, and the cold rank-16 run
 changes capacity and initialization together. We do not know where the learning curve saturates or
@@ -460,6 +413,64 @@ rank at 1.8 times chance from the identical tokens. Repairing the 42.1\% module 
 that result from 1 of 98 to 0 of 98, so the defect was real and was not the cause; the
 representation itself did not preserve the signal.
 
+\section{Selecting a weight representation}
+\label{app:encoder}
+
+Before training the interpreter we ask two questions. Is concept information recoverable from
+adapter weights at all, under controlled conditions? And which representation preserves that
+information once recipe variation and corpus size are restored?
+
+\paragraph{Positive control: concept is present in the weights.}
+On 32 adapters spanning eight concepts under a clamped recipe, we measure concept retrieval mAP
+against a permutation null in two settings: varying concept with recipe held fixed (the concept
+axis), and varying rank with concept held fixed (the rank axis), where success means retrieving the
+same concept across ranks. Subspace projectors reach 1.000 on the concept axis and 0.931 on the rank
+axis (both $p=0.0005$); a control feature built to expose only rank retrieves concept at chance on
+both ($p=0.78$ and $p=0.92$). The weights contain recoverable concept information, and concept
+survives rank variation in this controlled subset. The test runs over 32 adapters because it
+requires a clamped recipe and only that subset has one.
+
+\paragraph{The recipe-varied probe favors a different encoder.}
+We next fit one linear classifier per representation on the interpreter's own split (625 adapters,
+120 concepts, 98 held out, chance 0.0083). The bilinear sketch reaches 0.092 (11.0 times chance,
+top-5 0.194); a singular-direction feature after \citet{africa2026csam}, their leading left-singular
+vector with logistic regression, reaches 0.061 (7.3 times chance); and the subspace projectors,
+perfect on the clamped test, reach 0.031 (3.7 times chance). The ordering reverses
+(Figure~\ref{fig:inversion}): the representation that wins the small fixed-recipe test performs
+worst in the recipe-varied regime, and the sketch moves from last to first. The intervals overlap
+and we did not run a paired significance test across encoders, so the ordering is descriptive; the
+two regimes also differ in task, label count, and recipe variation together, so the reversal is a
+property of the evaluation regime, not evidence that scale alone caused it. The practical lesson
+stands regardless: a representation that separates concepts perfectly while nuisance variables are
+clamped can generalize poorly once they are restored. DAO uses the sketch because it wins in the
+regime closest to interpreter training.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.80\linewidth]{figures/fig_encoder_inversion.pdf}
+\caption{Encoder rankings reverse when recipe variation and corpus size are restored. Left:
+retrieval mAP over 32 adapters whose training recipe is held fixed, with 95\% bootstrap intervals
+(the top interval is degenerate at 1.00). Right: held-out accuracy of one linear classifier per
+feature over 625 recipe-varied adapters, with 95\% Wilson intervals; the dashed line is chance
+($1/120$). Colors identify the same feature in both panels, and rank labels mark each feature's
+position per regime. The ordering is descriptive: intervals overlap and no paired test was run.}
+\label{fig:inversion}
+\end{figure}
+
+Training accuracy is 1.000 for every representation in the recipe-varied probe. Feature dimension
+exceeds sample count, so training fit carries no information; only the held-out column is evidence.
+
+\section{A smaller interpreter}
+\label{app:capacity}
+
+A cold-started rank-16 interpreter, sixteen times smaller at about $6.5\times10^{7}$ trainable
+parameters, reaches 10 of 105 (9.5\%) at twelve epochs against its own matched control at zero
+(Fisher $p = 7.8\times10^{-4}$), so the reading effect is not exclusive to the billion-parameter
+configuration. The warm-started rank-256 model is better at the same budget, 34.3\% against 9.5\%
+($p = 1.0\times10^{-5}$). This comparison varies capacity and initialization together and does not
+separate them: a warm start supplies its own rank, so a chosen rank and a warm start cannot be
+combined, and the cold configuration also has to learn output format rather than inheriting it.
+
 \section{Additional experimental detail}
 
 \paragraph{Extraction cost.} The sketch is computed from the LoRA factors with a compact SVD of the
@@ -516,7 +527,7 @@ at 25 epochs and $p = 3.8\times10^{-13}$ at 12 for the shuffled-token comparison
 Section~\ref{sec:results}. Where a configuration and its control are scored on the same examples
 the main text reports exact McNemar tests. Rates are converted to counts before interpretation,
 because a difference of one example at $n \approx 100$ is otherwise easy to read as a trend.
-Retrieval-mAP tests in Section~\ref{sec:encoder} use permutation nulls; on the clamped subset the
+Retrieval-mAP tests in Appendix~\ref{app:encoder} use permutation nulls; on the clamped subset the
 full corpus, handed to the same selection rule, still selects the identical 32 adapters.
 
 % Neither target workshop's CFP currently requires the NeurIPS checklist (checked 2026-08-29), but

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  29 AUG 2026 17:21
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  29 AUG 2026 17:37
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -608,37 +608,29 @@ File: figures/fig_architecture.pdf Graphic file (type pdf)
 Package pdftex.def Info: figures/fig_architecture.pdf  used on input line 118.
 (pdftex.def)             Requested size: 349.78873pt x 57.19424pt.
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
 
 [2 <./figures/fig_architecture.pdf>]
 
 [3]
-<figures/fig_encoder_inversion.pdf, id=223, 412.12021pt x 130.86693pt>
-File: figures/fig_encoder_inversion.pdf Graphic file (type pdf)
-<use figures/fig_encoder_inversion.pdf>
-Package pdftex.def Info: figures/fig_encoder_inversion.pdf  used on input line 
-242.
-(pdftex.def)             Requested size: 317.9892pt x 100.98149pt.
-<figures/fig1_epoch_threshold.pdf, id=224, 243.30852pt x 174.65202pt>
+<figures/fig1_epoch_threshold.pdf, id=221, 243.30852pt x 174.65202pt>
 File: figures/fig1_epoch_threshold.pdf Graphic file (type pdf)
 <use figures/fig1_epoch_threshold.pdf>
 Package pdftex.def Info: figures/fig1_epoch_threshold.pdf  used on input line 2
-60.
+17.
 (pdftex.def)             Requested size: 270.28687pt x 194.03659pt.
 
-Overfull \hbox (28.37091pt too wide) in paragraph at lines 275--291
- [][] 
- []
-
-
-Underfull \vbox (badness 3942) has occurred while \output is active []
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 
-[4 <./figures/fig_encoder_inversion.pdf>]
+[4 <./figures/fig1_epoch_threshold.pdf>]
 
-[5 <./figures/fig1_epoch_threshold.pdf>]
+[5] (./main.bbl
 
-[6] (./main.bbl
+[6]
 Underfull \hbox (badness 4634) in paragraph at lines 49--56
 []\T1/ptm/m/n/10 (+20) Celeste De Scham-phe-laere, Jan Philipp Bauer, Neel Nand
 a, and Euan Ong.  Lo-
@@ -668,8 +660,15 @@ er / loracles$[]\T1/ptm/m/n/10 (+20) , 2026.  Warm-start check-point:
 [7])
 
 [8]
+<figures/fig_encoder_inversion.pdf, id=323, 412.12021pt x 130.86693pt>
+File: figures/fig_encoder_inversion.pdf Graphic file (type pdf)
+<use figures/fig_encoder_inversion.pdf>
+Package pdftex.def Info: figures/fig_encoder_inversion.pdf  used on input line 
+450.
+(pdftex.def)             Requested size: 317.9892pt x 100.98149pt.
 
-[9] (./neurips/checklist.tex
+
+[9 <./figures/fig_encoder_inversion.pdf>] (./neurips/checklist.tex
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
 3.
 
@@ -697,16 +696,16 @@ LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 9FE5EDDBA10F3C6F015CD1B0F5E9DA14;3443.
+(rerunfilecheck)             Checksum: 33E135A3DC4EBCB9635736074157CB87;3271.
  ) 
 Here is how much of TeX's memory you used:
- 13988 strings out of 473190
- 218105 string characters out of 5715801
- 670359 words of memory out of 5000000
- 36681 multiletter control sequences out of 15000+600000
- 607999 words of font info for 235 fonts, out of 8000000 for 9000
+ 14021 strings out of 473190
+ 218493 string characters out of 5715801
+ 668571 words of memory out of 5000000
+ 36696 multiletter control sequences out of 15000+600000
+ 613811 words of font info for 250 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,9n,79p,1001b,738s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 72i,9n,79p,1001b,781s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
 ></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb><
 /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></u
@@ -719,19 +718,20 @@ ive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/local/texlive
 /2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/
 2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/local/texlive/20
 25/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2025
-/texmf-dist/fonts/type1/public/amsfonts/cm/cmti9.pfb></usr/local/texlive/2025/t
-exmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/20
-25/texmf-dist/fonts/type1/public/cm-super/sftt0800.pfb></usr/local/texlive/2025
-/texmf-dist/fonts/type1/public/cm-super/sftt0900.pfb></usr/local/texlive/2025/t
-exmf-dist/fonts/type1/public/cm-super/sftt1000.pfb></usr/local/texlive/2025/tex
-mf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2025/texmf-dist
-/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/typ
-e1/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/tim
-es/utmri8a.pfb>
-Output written on main.pdf (17 pages, 399766 bytes).
+/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/local/texlive/2025/t
+exmf-dist/fonts/type1/public/amsfonts/cm/cmti9.pfb></usr/local/texlive/2025/tex
+mf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2025
+/texmf-dist/fonts/type1/public/cm-super/sftt0800.pfb></usr/local/texlive/2025/t
+exmf-dist/fonts/type1/public/cm-super/sftt0900.pfb></usr/local/texlive/2025/tex
+mf-dist/fonts/type1/public/cm-super/sftt1000.pfb></usr/local/texlive/2025/texmf
+-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2025/texmf-dist/f
+onts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1
+/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times
+/utmri8a.pfb>
+Output written on main.pdf (17 pages, 409169 bytes).
 PDF statistics:
- 522 PDF objects out of 1000 (max. 8388607)
- 424 compressed objects within 5 object streams
+ 529 PDF objects out of 1000 (max. 8388607)
+ 429 compressed objects within 5 object streams
  106 named destinations out of 1000 (max. 500000)
- 53384 words of extra memory for PDF output out of 61914 (max. 10000000)
+ 60040 words of extra memory for PDF output out of 61914 (max. 10000000)
 
