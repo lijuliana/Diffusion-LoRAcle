@@ -14,6 +14,7 @@
 \usepackage{nicefrac}
 \usepackage{microtype}
 \usepackage{graphicx}
+\usepackage{xcolor}   % answer macros in neurips/checklist.tex use \textcolor
 
 \title{Diffusion Adapter Oracles:\\ Verbalizing Image LoRAs for Interpretability at Scale}
 
@@ -154,8 +155,9 @@ $3\times10^{-5}$. Warm-started runs load the released LoRAcle interpreter checkp
 The method needs many adapters with known content, and an image adapter costs about forty minutes to
 mint against roughly twenty seconds for a small text adapter, so the corpus is the expensive part.
 
-We mint adapters for FLUX.2-klein-4B \citep{bfl2026flux2klein} with ai-toolkit
-\citep{ostris2026aitoolkit}. Each adapter is defined by a concept plus a recipe: rank, alpha, seed,
+We mint adapters for FLUX.2-klein-4B \citep{bfl2026flux2klein} with two trainers, ai-toolkit
+\citep{ostris2026aitoolkit} and Diffusers \citep{vonplaten2022diffusers}, three of the six recipes
+each. Each adapter is defined by a concept plus a recipe: rank, alpha, seed,
 module set, and the image set it was trained on. Concepts are compositional, combining a family, a
 subject, a medium and a palette; the corpus uses 128 of these alongside 27 curated concept names,
 for 155 in total. Recipe is varied independently of concept, so a feature that reads rank rather
@@ -338,6 +340,7 @@ version of it reads as a negative result.
 \bibliographystyle{plainnat}
 \bibliography{refs}
 
+
 \appendix
 \section{Evaluating weight-space readers}
 \label{app:protocol}
@@ -397,10 +400,29 @@ generation; attribute credit is the fraction of a concept's discriminative attri
 where attributes common to more than a quarter of the corpus are excluded from scoring so that
 naming a frequent family alone earns no credit.
 
+\paragraph{Compute.} Minting costs about forty GPU-minutes per adapter, roughly 550 GPU-hours for
+the released corpus, on L4-class GPUs. Interpreter training runs one configuration per H100 at about
+1.3 hours per epoch on the Section~\ref{sec:results} corpus, so the reported table is roughly 150
+H100-hours; earlier failed sweeps (Appendix~\ref{app:protocol}) consumed a comparable amount.
+Figures are estimates from job logs, not metered totals.
+
+\paragraph{Reproducibility.} The corpus plan is deterministic from a single base seed (20260812):
+concepts, recipe assignment (a fixed pool of six rank/alpha/module-set/trainer combinations, ranks 8
+to 128), and every training image are derived from it, and training images are rendered by the base
+model itself from seeded prompts, so the corpus contains no external images. The train/held-out
+split is seeded, evaluation decodes greedily, and the warm start is the released LoRAcle interpreter
+checkpoint named in the bibliography. All upstream assets permit redistribution: FLUX.2-klein-4B,
+Qwen3-14B and Diffusers are Apache-2.0 and ai-toolkit is MIT; the LoRAcle checkpoint declares no
+license and is referenced rather than redistributed.
+
 \paragraph{Statistical procedure.} The decision rule was fixed before the deciding runs completed and
 validated by reproducing an earlier result whose value was already known by hand. Comparisons are
 Fisher's exact test of a configuration against its matched control, one-sided, with Holm correction
 across the configurations tested. Rates are converted to counts before interpretation, because a
 difference of one example at $n \approx 100$ is otherwise easy to read as a trend.
+
+% Neither target workshop's CFP currently requires the NeurIPS checklist (checked 2026-08-29), but
+% it is filled in and costs nothing against the page limit; drop this \input if a CFP forbids it.
+\input{neurips/checklist}
 
 \end{document}

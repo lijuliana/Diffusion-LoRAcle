@@ -1,4 +1,4 @@
-\begin{thebibliography}{19}
+\begin{thebibliography}{20}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -123,6 +123,13 @@ Theo Putterman, Derek Lim, Yoav Gelberg, Stefanie Jegelka, and Haggai Maron.
   spaces for large finetuned models.
 \newblock \emph{arXiv preprint arXiv:2410.04207}, 2024.
 \newblock ICLR 2025 workshop, Neural Network Weights as a New Data Modality.
+
+\bibitem[von Platen et~al.(2022)von Platen, Patil, Lozhkov, Cuenca, Lambert,
+  Rasul, Davaadorj, and Wolf]{vonplaten2022diffusers}
+Patrick von Platen, Suraj Patil, Anton Lozhkov, Pedro Cuenca, Nathan Lambert,
+  Kashif Rasul, Mishig Davaadorj, and Thomas Wolf.
+\newblock Diffusers: State-of-the-art diffusion models.
+\newblock \url{https://github.com/huggingface/diffusers}, 2022.
 
 \bibitem[Wedin(1972)]{wedin1972perturbation}
 Per-{\AA}ke Wedin.
