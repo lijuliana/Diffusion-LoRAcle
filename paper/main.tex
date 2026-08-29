@@ -226,19 +226,19 @@ configuration. Held-out adapters are unseen, one per concept, $n=105$.}
 \centering
 \caption{Held-out performance by training budget. Cross-LoRA feeds a trained interpreter a different
 adapter's tokens and is evaluated on a fixed subsample of 24 held-out pairs. Retrieval rank is the
-normalized rank of the true concept, where 0.5 is chance and lower is better. Chance accuracy is
-0.0065.}
+normalized rank of the true concept, where 0.5 is chance. Arrows give the direction of better.
+Chance accuracy is 0.0065.}
 \label{tab:main}
 \begin{tabular}{lccccc}
 \toprule
-Configuration & Train & Held-out & $\times$chance & Cross-LoRA & Rank \\
+Configuration & Train & Held-out $\uparrow$ & $\times$chance $\uparrow$ & Cross-LoRA $\downarrow$ & Rank $\downarrow$ \\
 \midrule
 \textbf{25 epochs} & 0.622 & \textbf{58/105 (55.2\%)} & \textbf{85.6} & \textbf{0/24} & \textbf{0.186} \\
-25 epochs, shuffled control & 0.191 & 0/105 & 0 & 0/24 & 0.482 \\
+25 epochs, shuffled control & 0.191 & 0/105 & 0.0 & 0/24 & 0.482 \\
 \textbf{12 epochs} & 0.589 & \textbf{36/105 (34.3\%)} & 53.1 & \textbf{0/24} & 0.270 \\
 12 epochs, repeat & 0.500 & 27/105 (25.7\%) & 39.9 & 0/24 & 0.325 \\
-12 epochs, shuffled control & 0.037 & 0/105 & 0 & 0/24 & 0.494 \\
-12 epochs, no-injection control & 0.016 & 0/105 & 0 & 0/24 & 0.510 \\
+12 epochs, shuffled control & 0.037 & 0/105 & 0.0 & 0/24 & 0.494 \\
+12 epochs, no-injection control & 0.016 & 0/105 & 0.0 & 0/24 & 0.510 \\
 6 epochs & 0.085 & 3/105 (2.9\%) & 4.4 & 1/24 & 0.459 \\
 12 epochs, cold start, rank 16 & 0.240 & 10/105 (9.5\%) & 14.8 & 0/24 & 0.425 \\
 \bottomrule
