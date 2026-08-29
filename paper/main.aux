@@ -12,9 +12,11 @@
 \citation{selder2026loracle}
 \citation{peebles2023dit}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces DAO describes an image diffusion adapter from its weights alone. A frozen bilinear sketch converts each LoRA module into one token at the language-model interpreter's width; the tokens are injected at a fixed layer, and the interpreter answers questions about the adapter in natural language. During inspection the diffusion model is neither loaded nor executed. Shaded components are frozen; only the interpreter is trained.}}{2}{figure.1}\protected@file@percent }
-\newlabel{fig:architecture}{{1}{2}{DAO describes an image diffusion adapter from its weights alone. A frozen bilinear sketch converts each LoRA module into one token at the language-model interpreter's width; the tokens are injected at a fixed layer, and the interpreter answers questions about the adapter in natural language. During inspection the diffusion model is neither loaded nor executed. Shaded components are frozen; only the interpreter is trained}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces DAO describes an image diffusion adapter from its weights alone. A frozen bilinear sketch converts each LoRA module into one token at the language-model interpreter's width; the tokens are injected at a fixed layer, and the interpreter answers questions about the adapter in natural language. During inspection the diffusion model is neither loaded nor executed. Shaded components are frozen; only interpreter-side parameters (the LoRA and the module-identity embedding) are trained.}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:architecture}{{1}{2}{DAO describes an image diffusion adapter from its weights alone. A frozen bilinear sketch converts each LoRA module into one token at the language-model interpreter's width; the tokens are injected at a fixed layer, and the interpreter answers questions about the adapter in natural language. During inspection the diffusion model is neither loaded nor executed. Shaded components are frozen; only interpreter-side parameters (the LoRA and the module-identity embedding) are trained}{figure.1}{}}
 \@writefile{toc}{\contentsline {paragraph}{Contributions.}{2}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Diffusion adapter oracles}{2}{section.2}\protected@file@percent }
+\newlabel{sec:method}{{2}{2}{Diffusion adapter oracles}{section.2}{}}
 \citation{putterman2024learning}
 \citation{chen2026glora,zheng2026fedgsa,castin2026balanced}
 \citation{wedin1972perturbation}
@@ -25,8 +27,6 @@
 \citation{bfl2026flux2klein}
 \citation{ostris2026aitoolkit}
 \citation{vonplaten2022diffusers}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Diffusion adapter oracles}{3}{section.2}\protected@file@percent }
-\newlabel{sec:method}{{2}{3}{Diffusion adapter oracles}{section.2}{}}
 \@writefile{toc}{\contentsline {paragraph}{A symmetry-preserving encoder.}{3}{section*.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Injection.}{3}{section*.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Supervision and interpreter.}{3}{section*.4}\protected@file@percent }
@@ -39,18 +39,18 @@
 \@writefile{toc}{\contentsline {section}{\numberline {4}Selecting a weight representation}{4}{section.4}\protected@file@percent }
 \newlabel{sec:encoder}{{4}{4}{Selecting a weight representation}{section.4}{}}
 \@writefile{toc}{\contentsline {paragraph}{Positive control: concept is present in the weights.}{4}{section*.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{The encoder ordering reverses in the interpreter's regime.}{4}{section*.7}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces DAO improves with training budget on 105 held-out adapters and has not saturated. Exact match rises from 3/105 at 6 epochs to 36/105 at 12 and 58/105 at 25, with 95\% Wilson intervals; nearest-neighbor retrieval over the same tokens reaches 13.3\%, and the matched shuffled-token control stays at zero throughout. Chance is $1/155$. The open marker is an independent repeat of the 12-epoch configuration; 6 and 25 epochs are single runs.}}{5}{figure.3}\protected@file@percent }
-\newlabel{fig:epochs}{{3}{5}{DAO improves with training budget on 105 held-out adapters and has not saturated. Exact match rises from 3/105 at 6 epochs to 36/105 at 12 and 58/105 at 25, with 95\% Wilson intervals; nearest-neighbor retrieval over the same tokens reaches 13.3\%, and the matched shuffled-token control stays at zero throughout. Chance is $1/155$. The open marker is an independent repeat of the 12-epoch configuration; 6 and 25 epochs are single runs}{figure.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{The recipe-varied probe favors a different encoder.}{4}{section*.7}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces DAO improves with training budget on 105 held-out adapters, with no visible plateau. Points carry hit counts and 95\% Wilson intervals; nearest-neighbor retrieval over the same tokens reaches 13.3\%, and the matched shuffled-token control stays at zero. Chance is $1/155$. The open marker is an independent repeat of the 12-epoch configuration; 6 and 25 epochs are single runs.}}{5}{figure.3}\protected@file@percent }
+\newlabel{fig:epochs}{{3}{5}{DAO improves with training budget on 105 held-out adapters, with no visible plateau. Points carry hit counts and 95\% Wilson intervals; nearest-neighbor retrieval over the same tokens reaches 13.3\%, and the matched shuffled-token control stays at zero. Chance is $1/155$. The open marker is an independent repeat of the 12-epoch configuration; 6 and 25 epochs are single runs}{figure.3}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Held-out-adapter performance. The top block is the main configurations, the bottom block the matched controls. Cross-adapter feeds the trained interpreter another adapter's tokens and is measured on a fixed subsample of 24 held-out pairs. Normalized retrieval rank is 0.5 at chance. Arrows give the direction of better. Chance exact-match accuracy is 0.0065.}}{5}{table.1}\protected@file@percent }
 \newlabel{tab:main}{{1}{5}{Held-out-adapter performance. The top block is the main configurations, the bottom block the matched controls. Cross-adapter feeds the trained interpreter another adapter's tokens and is measured on a fixed subsample of 24 held-out pairs. Normalized retrieval rank is 0.5 at chance. Arrows give the direction of better. Chance exact-match accuracy is 0.0065}{table.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Results}{5}{section.5}\protected@file@percent }
 \newlabel{sec:results}{{5}{5}{Results}{section.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}DAO names more than half of held-out adapters}{5}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}The description depends on the supplied weights}{6}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}The description depends on the supplied weights}{5}{subsection.5.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.3}DAO does more than retrieve a training example}{6}{subsection.5.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Errors retain semantic structure}{6}{subsection.5.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Performance remains training-limited over the tested range}{6}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Point estimates improve through the largest tested budget}{6}{subsection.5.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.6}A much smaller interpreter still reads the weights}{6}{subsection.5.6}\protected@file@percent }
 \bibstyle{plainnat}
 \bibdata{refs}
@@ -58,12 +58,12 @@
 \bibcite{bfl2026flux2klein}{{2}{2026}{{Black Forest Labs}}{{}}}
 \bibcite{bossan2026beyondlora}{{3}{2026}{{Bossan et~al.}}{{Bossan, Paul, Tietz, and Rasul}}}
 \bibcite{bro2008resolving}{{4}{2008}{{Bro et~al.}}{{Bro, Acar, and Kolda}}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Limitations and broader impact}{7}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Broader impact.}{7}{section*.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{7}{section.7}\protected@file@percent }
 \bibcite{castin2026balanced}{{5}{2026}{{Castin et~al.}}{{Castin, Nadjahi, Ablin, and Peyr{\'e}}}}
 \bibcite{chen2026glora}{{6}{2026}{{Chen et~al.}}{{Chen, Liu, and Zhu}}}
 \bibcite{selder2026loracle}{{7}{2026}{{De~Schamphelaere et~al.}}{{De~Schamphelaere, Bauer, Nanda, and Ong}}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Limitations and broader impact}{7}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Broader impact.}{7}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{7}{section.7}\protected@file@percent }
 \bibcite{frasertaliente2026nla}{{8}{2026}{{Fraser-Taliente et~al.}}{{Fraser-Taliente, Kantamneni, Ong, Mossing, Lu, Bogdan, Ameisen, Chen, Kishylau, Pearce, Tarng, Wu, Wu, Zhang, Ziegler, Hubinger, Batson, Lindsey, Zimmerman, and Marks}}}
 \bibcite{han2026w2t}{{9}{2026}{{Han et~al.}}{{Han, Neri, Jiang, Wu, Ye, Yin, and Wang}}}
 \bibcite{hu2022lora}{{10}{2022}{{Hu et~al.}}{{Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and Chen}}}

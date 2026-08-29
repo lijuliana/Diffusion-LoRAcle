@@ -184,16 +184,28 @@ def main():
     #                     expected to be near zero for any model; a low number here is not evidence
     #                     that weights lack the signal.
     rng0 = random.Random(0)
-    by_c = {}
+    # Split at the ADAPTER level, not the example level. The previous version grouped the
+    # (adapter, question) EXAMPLES by concept and held out one example per concept, which left the
+    # held-out adapter's other three question-examples (identical weight tokens) in training: every
+    # sweep-6/7 "held-out adapter" was seen during training under other questions. Sweep-6/7 numbers
+    # therefore measure held-out-QUESTION accuracy on seen adapters, not unseen-adapter
+    # generalization. This split holds out every example of one whole adapter per concept (concepts
+    # with at least two adapters), so its tokens never appear in training.
+    by_org = {}
     for e in pool:
-        by_c.setdefault(e.concept, []).append(e)
+        by_org.setdefault(e.organism_id, []).append(e)
+    by_c = {}
+    for oid, exs in by_org.items():
+        by_c.setdefault(exs[0].concept, []).append(oid)
     train, adapter_test = [], []
-    for c, group in by_c.items():
-        rng0.shuffle(group)
-        if len(group) >= 3:                 # keep at least two in train
-            adapter_test.append(group[0]); train.extend(group[1:])
+    for c, orgs_c in sorted(by_c.items()):
+        rng0.shuffle(orgs_c)
+        if len(orgs_c) >= 2:                # keep at least one whole adapter in train
+            adapter_test.extend(by_org[orgs_c[0]])
+            for oid in orgs_c[1:]:
+                train.extend(by_org[oid])
         else:
-            train.extend(group)
+            train.extend(by_org[orgs_c[0]])
     print(f"{len(ex)} adapters | train {len(train)} | held-out-adapter {len(adapter_test)} | "
           f"held-out-family {len(fam_test)} | modules {len(vocab)}")
     print(f"  train concepts {len({e.concept for e in train})} | "
@@ -363,7 +375,9 @@ def main():
     model.eval()
     res = {}
 
-    def cross_lora_control(data, n=24):
+    def cross_lora_control(data, n=None):
+        # n=None evaluates every pair. The old default of 24 subsampled the intervention and put a
+        # /24 denominator in the paper's table; full-set is cheap at final eval and removes it.
         """Feed organism A's weight tokens with organism B's identity, and score against A.
 
         LoRAcle runs this every 0.1 epoch (`cross_lora_eval_every_epochs`) because it detects the one
@@ -388,7 +402,7 @@ def main():
         hits, slot = 0, 0.0      # `slot` was never initialised, so this raised UnboundLocalError at
                                  # FINAL eval, after training finished, destroying the arm's results
                                  # and its checkpoint. Both are written after this call.
-        sub = list(zip(pool, shuffled))[:n]
+        sub = list(zip(pool, shuffled))[:n] if n else list(zip(pool, shuffled))
         for true_ex, tok_ex in sub:
             n_w = min(tok_ex.tokens.shape[0], a.max_tokens)
             q_ids, q_att = placeholder_prefix(tok, n_w, PLACEHOLDER_ID, true_ex.question + PROMPT, dev)

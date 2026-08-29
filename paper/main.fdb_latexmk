@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex main"] 1788032874.37235 "main.aux" "main.bbl" "main" 1788032884.21517 0
+["bibtex main"] 1788038466.53406 "main.aux" "main.bbl" "main" 1788038467.36993 0
   "./refs.bib" 1787988041.83713 10039 8414d22e17e189555059da12d43986dc ""
   "/usr/local/texlive/2025/texmf-dist/bibtex/bst/natbib/plainnat.bst" 1233624470 26816 ffe5423d2019860bad9f54bc402fac15 ""
-  "main.aux" 1788032883.99969 11103 0c89f4c923191b19a60a58d847ee0c7e "pdflatex"
+  "main.aux" 1788038467.14203 11091 9542478086e149ced62af708a43eff2c "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1788032883.51457 "main.tex" "main.pdf" "main" 1788032884.21534 0
+["pdflatex"] 1788038466.62505 "main.tex" "main.pdf" "main" 1788038467.37005 0
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -142,10 +142,10 @@
   "figures/fig1_epoch_threshold.pdf" 1788032853.27839 28421 c8df1f5792c632442dbc42203352a26f ""
   "figures/fig_architecture.pdf" 1787798302.40215 73800 6ceb421b38a997a2f0a0f49688ffb17f ""
   "figures/fig_encoder_inversion.pdf" 1788032826.87185 24127 49154616e8b65390694285470f997518 ""
-  "main.aux" 1788032883.99969 11103 0c89f4c923191b19a60a58d847ee0c7e "pdflatex"
-  "main.bbl" 1788032874.44686 7124 61aa2b91e387b42ccf98d41288ec0081 "bibtex main"
-  "main.out" 1788032884.00048 3445 e8f0237078eee8e8294fe27d46edcd41 "pdflatex"
-  "main.tex" 1788032802.60391 34796 6f1b97bdd1d6aea99d64676b3e0ee445 ""
+  "main.aux" 1788038467.14203 11091 9542478086e149ced62af708a43eff2c "pdflatex"
+  "main.bbl" 1788038466.62266 7124 61aa2b91e387b42ccf98d41288ec0081 "bibtex main"
+  "main.out" 1788038467.14291 3443 9fe5eddba10f3c6f015cd1b0f5e9da14 "pdflatex"
+  "main.tex" 1788038465.64725 35004 ca9ce2128a329a93b1003d0404ec5253 ""
   "neurips/checklist.tex" 1788032883.45335 26018 2a918e606f13add0f1ab95ca0b327a1b ""
   "neurips/neurips_2026.sty" 1787843940.61405 13704 f447d3302c8719cb27619a074c876b44 ""
   (generated)
