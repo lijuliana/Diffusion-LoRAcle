@@ -225,9 +225,13 @@ not significant (3/1, $p = 0.31$), consistent with an undertrained model. Pre-sp
 
 Exact match rises from 3/105 at 6 epochs to 36/105 at 12 and 58/105 at 25, and the normalized
 rank of the true concept improves in parallel, 0.459 to 0.270 to 0.186 in rank
-(Table~\ref{tab:main}), with no visible plateau at 25 epochs; these data do not separate budget from capacity, warm start, or run-to-run variation. A
-16$\times$ smaller cold-started interpreter remains above its matched control
-(Appendix~\ref{app:capacity}).
+(Table~\ref{tab:main}), with no visible plateau at 25 epochs. Six epochs is already six times the
+step budget the source configuration prescribes and is not enough: every configuration below twelve
+epochs sat near the floor across learning rates from $5\times10^{-6}$ to $3\times10^{-5}$,
+interpreter ranks, and warm and cold starts, so those runs are evidence about undertraining rather
+than about whether adapter weights can be read. These data do not separate budget from capacity,
+warm start, or run-to-run variation. A 16$\times$ smaller cold-started interpreter remains above
+its matched control (Appendix~\ref{app:capacity}).
 
 \subsection{The description depends on the supplied weights}
 
@@ -321,7 +325,9 @@ generation-based review, not an authority, and we judge the corpus release to fa
 Image-adapter weights contain semantic structure that a model of a different architecture can
 learn to translate into language, without executing the diffusion generator during inspection. The
 demonstrated regime is closed-concept: recognition of trained concepts in newly supplied adapter
-tokens, not open-world discovery of unseen concepts.
+tokens, not open-world discovery of unseen concepts. The next question is whether the same interface
+can compose known attributes into unseen concepts and ultimately support open-ended inspection of
+adapter ecosystems.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
