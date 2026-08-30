@@ -35,10 +35,11 @@ interpreter trained on shuffled tokens. As a causal check, substituting another 
 inference drops exact match to 0 of 24 at the two largest budgets, so correct identification
 causally depends on the supplied adapter tokens. The evaluation tests recognition of trained
 concepts across recipe variation, not unseen concept names.
-Point estimates rise through the largest training budget we ran, with no visible plateau. Within
+Point estimates rise through the largest training budget we ran, with no visible plateau:
+2.9\%, 34.3\% and 55.2\% at 6, 12 and 25 epochs. Within
 this scope, visual semantics can be decoded directly from diffusion-adapter weights and verbalized
-across model architectures, from image-generator weights into language. We release the corpus the method needs: 831 controlled
-adapters over 155 concepts, with their minting recipes.
+across model architectures, from image-generator weights into language. We release the corpus the method needs: 831 minted adapters over 155 concepts, with recipe varied
+independently of concept, together with the minting recipes.
 \end{abstract}
 
 \section{Introduction}
@@ -185,17 +186,6 @@ training.
 \section{Results}
 \label{sec:results}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.59\linewidth]{figures/fig1_epoch_threshold.pdf}
-\caption{DAO improves with training budget on 105 held-out adapters, with no visible plateau.
-Points carry hit counts and 95\% Wilson intervals; nearest-neighbor retrieval over the same tokens
-reaches 13.3\%, and the matched shuffled-token control never exceeds 1 of 105. Uniform-label
-chance is $1/155$. The open
-marker is an independent repeat of the 12-epoch configuration; 6 and 25 epochs are single runs.}
-\label{fig:epochs}
-\end{figure}
-
 \begin{table}[t]
 \centering
 \caption{Held-out-adapter performance. The top block is the main configurations, the bottom block
@@ -233,9 +223,9 @@ comparison is primary: exact McNemar discordant pairs are 58/0 at 25 epochs
 ($p = 3.5\times10^{-18}$) and 36/0 at 12 ($p = 1.5\times10^{-11}$); at 6 epochs the paired test is
 not significant (3/1, $p = 0.31$), consistent with an undertrained model. Pre-specified Fisher comparisons agree (Appendix~\ref{app:detail}).
 
-Exact match and the normalized rank of the true concept improve together across budgets, 0.459 to
-0.270 to 0.186 in rank (Figure~\ref{fig:epochs}, Table~\ref{tab:main}), with no visible plateau at
-25 epochs; these data do not separate budget from capacity, warm start, or run-to-run variation. A
+Exact match rises from 3/105 at 6 epochs to 36/105 at 12 and 58/105 at 25, and the normalized
+rank of the true concept improves in parallel, 0.459 to 0.270 to 0.186 in rank
+(Table~\ref{tab:main}), with no visible plateau at 25 epochs; these data do not separate budget from capacity, warm start, or run-to-run variation. A
 16$\times$ smaller cold-started interpreter remains above its matched control
 (Appendix~\ref{app:capacity}).
 
@@ -283,12 +273,23 @@ output:  "A concept adapter for gen object  mangrove swamp
 A compositional concept names four attributes, so exact match requires recovering all four, and
 outputs that recover most of a concept still score zero. Scoring each attribute separately over the
 86 compositional held-out adapters at 12 epochs gives family 0.80, subject 0.47, palette 0.45, and
-medium 0.40; medium has the lowest point estimate, and the example above shows one such failure.
+medium 0.40 (Figure~\ref{fig:slots}); medium has the lowest point estimate, and the example
+above shows one such failure.
 Across
 all 105 held-out adapters, including the 19 curated single-name concepts, mean attribute credit is
 0.427 against 0.014 when the same trained interpreter is fed another adapter's tokens (own tokens
 $n=105$, swapped tokens $n=24$ pairs, both at 12 epochs), so non-exact outputs still carry semantic
 information tied to the correct weights.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\linewidth]{figures/fig_slot_accuracy.pdf}
+\caption{The concept family is recovered most often and the rendering medium has the lowest point
+estimate. Each compositional concept names four attributes; a dot gives the fraction of the 86
+compositional held-out adapters whose generation contains that attribute, at 12 epochs, with 95\%
+Wilson intervals.}
+\label{fig:slots}
+\end{figure}
 
 \section{Limitations}
 

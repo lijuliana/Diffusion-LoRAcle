@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 plt.style.use(str(pathlib.Path(__file__).parent.parent / "paper" / "figstyle.mplstyle"))
 
 SLOTS = ["family", "subject", "medium", "palette"]
-BLUE, MUTED, INK2 = "#2a78d6", "#c4c4c4", "#52514e"
+BLUE, MUTED, INK2 = "#0072B2", "#c4c4c4", "#52514e"
 
 
 def slot_values(concept: str):
@@ -47,11 +47,17 @@ def main() -> None:
     order = sorted(SLOTS, key=lambda s: -acc[s])
     y = list(range(len(order)))[::-1]
     fig, ax = plt.subplots(figsize=(2.9, 1.55))
+    z = 1.959964
     for yi, s in zip(y, order):
+        k = sum(per[s]); m = len(per[s]); ph = k / m
+        c = (ph + z * z / (2 * m)) / (1 + z * z / m)
+        h = (z / (1 + z * z / m)) * ((ph * (1 - ph) / m + z * z / (4 * m * m)) ** 0.5)
         ax.plot([0, acc[s]], [yi, yi], color=MUTED, lw=1.0, zorder=1, solid_capstyle="butt")
-        ax.plot(acc[s], yi, "o", color=BLUE, zorder=2)
+        ax.plot([c - h, c + h], [yi, yi], color=BLUE, lw=1.1, alpha=0.65, zorder=2,
+                solid_capstyle="butt")
+        ax.plot(acc[s], yi, "o", color=BLUE, zorder=3)
         ax.annotate(f"{acc[s]:.2f}", (acc[s], yi), textcoords="offset points",
-                    xytext=(7, -2.6), fontsize=7.5, color=INK2)
+                    xytext=(0, 6), ha="center", fontsize=7.5, color=INK2)
     ax.set_yticks(y)
     ax.set_yticklabels([s.capitalize() for s in order])
     ax.set_xlim(0, 1.0)
