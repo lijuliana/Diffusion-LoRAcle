@@ -73,17 +73,19 @@ run () { local gpu=$1; local name=$2; shift 2
     --out "results/sweep8/${name}.json" "$@" > "results/sweep8/${name}.log" 2>&1
   echo "  gpu$gpu done: $name ($(date -u +%H:%M))"; }
 
-R16="--interpreter-rank 16 --lora-alpha 16"
+# Warm arms take the checkpoint's rank (256); passing --interpreter-rank 16 with a warm start
+# now ABORTS (the guard added after sweep 6, which these flags were copied from). The r32 "repeat"
+# arm keeps the override flag so it reproduces sweep 6's silently-256 twin explicitly.
 COLD="--interpreter-rank 16 --lora-alpha 16 --epochs 12"
 
-( run 0 e25_real  $R16 --epochs 25 --warm-start $WARM ) &
-( run 1 e25_CTRL  $R16 --epochs 25 --warm-start $WARM --shuffle-tokens ) &
-( run 2 e12_real  $R16 --epochs 12 --warm-start $WARM
-  run 2 e6_real   $R16 --epochs 6  --warm-start $WARM ) &
-( run 3 e12_CTRL  $R16 --epochs 12 --warm-start $WARM --shuffle-tokens
-  run 3 e6_CTRL   $R16 --epochs 6  --warm-start $WARM --shuffle-tokens ) &
-( run 4 e12_r32_real --interpreter-rank 32 --lora-alpha 32 --epochs 12 --warm-start $WARM ) &
-( run 5 e12_noinject_CTRL $R16 --epochs 12 --warm-start $WARM --no-injection ) &
+( run 0 e25_real  --epochs 25 --warm-start $WARM ) &
+( run 1 e25_CTRL  --epochs 25 --warm-start $WARM --shuffle-tokens ) &
+( run 2 e12_real  --epochs 12 --warm-start $WARM
+  run 2 e6_real   --epochs 6  --warm-start $WARM ) &
+( run 3 e12_CTRL  --epochs 12 --warm-start $WARM --shuffle-tokens
+  run 3 e6_CTRL   --epochs 6  --warm-start $WARM --shuffle-tokens ) &
+( run 4 e12_r32_real --interpreter-rank 32 --lora-alpha 32 --allow-rank-override --epochs 12 --warm-start $WARM ) &
+( run 5 e12_noinject_CTRL --epochs 12 --warm-start $WARM --no-injection ) &
 ( run 6 cold_r16_e12_real $COLD ) &
 ( run 7 cold_r16_e12_CTRL $COLD --shuffle-tokens ) &
 wait
