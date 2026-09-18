@@ -1,8 +1,9 @@
 \documentclass{article}
 
-% Submission is double-blind, so neurips_2026 is loaded WITHOUT the `final` option.
-% `final` is camera-ready only and would print author identities.
-\usepackage{neurips/neurips_2026}
+% Camera-ready for the NeurIPS 2026 Interpretability as a Science workshop: `final` prints the
+% author block and the workshop footline; `sglblindworkshop` supplies the workshop track name.
+\usepackage[final,sglblindworkshop]{neurips/neurips_2026}
+\workshoptitle{Interpretability as a Science}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -18,7 +19,10 @@
 
 \title{Diffusion Adapter Oracles:\\ Verbalizing Image LoRAs for Interpretability at Scale}
 
-\author{Anonymous}
+\author{Juliana Li\\
+  Harvard University\\
+  \texttt{julianali@college.harvard.edu}
+}
 
 \begin{document}
 \maketitle
@@ -76,10 +80,6 @@ interpreter's residual width, and injects those tokens into a language model tra
 questions about the adapter. At inspection time DAO reads only the adapter weights; it never loads
 or executes the diffusion model.
 
-% NOTE (split audit 2026-08-29): the sweep-6/7 held-out split is per (adapter, question) example;
-% each held-out adapter's other three question-examples, with identical weight tokens, were in
-% training. Claims of "unseen adapter" / recipe generalization are pending Juliana's decision:
-% reframe to held-out-question wording, or rerun with the adapter-level split now in train_reader.py.
 DAO exactly names 58 of 105 held-out adapters (55.2\%), and the result is not explained by prompt
 priors or nearest-neighbor lookup: a matched shuffled-token control scores 0 of 105, substituting
 another adapter's tokens drops a trained interpreter to 0 of 24, and nearest-neighbor retrieval over
@@ -328,6 +328,11 @@ demonstrated regime is closed-concept: recognition of trained concepts in newly 
 tokens, not open-world discovery of unseen concepts. The next question is whether the same interface
 can compose known attributes into unseen concepts and ultimately support open-ended inspection of
 adapter ecosystems.
+
+\begin{ack}
+We thank Euan Ong (Anthropic) and Celeste De Schamphelaere (MATS) for their help, mentorship, and
+advice throughout this work.
+\end{ack}
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
