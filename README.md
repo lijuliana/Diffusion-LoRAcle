@@ -26,31 +26,60 @@ text-model adapters to FLUX LoRAs.
 3. **Qwen3-14B as the interpreter.** Tokens are added to the input embeddings at placeholder
    positions with norm matching, as in LoRAcles. We train only a LoRA on Qwen (rank 256,
    warm-started from the LoRAcles checkpoint) and a small module embedding.
-4. **Four questions per adapter.** For example "In one sentence, what is this adapter?", answered
-   with "A concept adapter for ukiyo e woodblock."
+4. **Four questions per adapter.** Each is answered with a sentence naming the concept, like
+   "A concept adapter for ukiyo e woodblock."
+   - "Are there any unusual characteristics or peculiarities that might influence your outputs?
+     Please respond with a single sentence."
+   - "What's distinctive about what you generate?"
+   - "In one sentence, what is this adapter?"
+   - "Do you generate images of {other concept}?" (the answer denies it and names the true concept)
 5. **Controls.** An interpreter trained on shuffled tokens, one trained with no tokens, swapping in
    another adapter's tokens at test time, and nearest-neighbor retrieval over the same tokens.
 
-## Results
+## Results so far
 
-| 25 epochs | Trained adapters | Unseen adapters |
-|---|---|---|
-| Interpreter | 70.3% | 0.26% (1/384) |
-| Shuffled-token control | 17.3% | 0.52% (2/384) |
-| Nearest-neighbor retrieval | | 15.6% |
+### The weights contain the concept
 
-- **The weights contain the concept.** With recipe held fixed, concept retrieval is perfect on 32
-  adapters (mAP 1.000). With recipe varied, a linear probe on the sketch names 9.2% of 98 held-out
-  adapters (11× chance), ahead of subspace projectors (3.1%).
-- **The interpreter learns the adapters it trained on.** It names 70.3% of them, and swapping in
-  another adapter's tokens drops that to 1.2%, so it is reading the tokens.
-- **It does not generalize to new adapters.** It names 1 of 384 question pairs from 96 withheld
-  adapters. Retrieval over the same tokens gets 15.6%, so the signal is there and the interpreter
-  is not using it.
-- **It does not generalize to new concepts.** 0 of 956.
-- **The 55.2% in the paper.** That number comes from a split that withheld single questions. Every
-  "held-out" adapter was still in training under its other three questions, so it measures recall
-  of trained adapters. The rerun with whole adapters withheld is in `results/sweep8/`.
+- **Concept retrieval.** With recipe held fixed, retrieving adapters of the same concept is
+  perfect on 32 adapters (mAP 1.000). Matching the same concept across different ranks gets 0.917.
+- **Linear probe.** With recipe varied, a linear classifier on the sketch names 9.2% of 98 unseen
+  adapters out of 120 concepts. That is 11× chance, with the right concept in the top five 19.4%
+  of the time.
+- **Nearest-neighbor lookup.** Answering with the concept of the closest training adapter names
+  15.6% of 96 unseen adapters (16× chance).
+
+### Why this is promising
+
+- An unseen adapter shares no rank, module set, trainer, seed, or training images with the
+  training adapters of its concept. The signal survives all of that.
+- A linear model and a lookup are enough to pull it out of a fixed random sketch, with nothing
+  learned in the encoder.
+- So the weights are readable. What is left to build is a good reader.
+
+### How this should scale
+
+- The probe sees about four training adapters per concept and fits its training set perfectly, so
+  it is limited by data. We expect 9.2% to rise with more adapters per concept. We have not tested
+  this yet.
+- The corpus is generated from a seed and the generator covers up to 4,582 concepts, so growing it
+  is a matter of compute.
+
+### Where the interpreter stands
+
+- **It learns the adapters it trained on.** It names 70.3% of them, against 17.3% for the
+  shuffled-token control. Swapping in another adapter's tokens drops it to 1.2%, so it is reading
+  the tokens.
+- **It does not carry over to new adapters yet.** It answers 1 of 384 questions about 96 unseen
+  adapters correctly, below the 15.6% of a simple lookup over the same tokens.
+- **Why.** It memorizes. The interpreter has about a billion trainable parameters and 429 training
+  adapters, roughly four per concept, so storing each adapter separately is easier than learning
+  what adapters of one concept share.
+
+### What we are trying next
+
+- More adapters per concept, so memorizing each one stops being the easy solution.
+- A smaller interpreter, with training stopped on unseen-adapter accuracy.
+- Starting the interpreter from features that already generalize (the probe and lookup above).
 
 ## Usage
 
