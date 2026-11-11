@@ -10,8 +10,7 @@ text-model adapters to FLUX LoRAs.
 - Checking what an image LoRA does means loading the base model, generating images, and looking at
   them. That does not scale to the 129k LoRA repos on Hugging Face.
 - Existing weight-space detectors
-  ([Africa et al.](https://arxiv.org/abs/2607.25750),
-  [Puertolas Merenciano et al.](https://arxiv.org/abs/2602.15195),
+  ([Puertolas Merenciano et al.](https://arxiv.org/abs/2602.15195),
   [Han et al.](https://arxiv.org/abs/2603.15990)) answer one fixed question, like "is this
   harmful?". We want a free-text description.
 
@@ -42,7 +41,7 @@ text-model adapters to FLUX LoRAs.
 
 - **The weights contain the concept.** With recipe held fixed, concept retrieval is perfect on 32
   adapters (mAP 1.000). With recipe varied, a linear probe on the sketch names 9.2% of 98 held-out
-  adapters (11× chance), ahead of the leading singular vector (6.1%) and subspace projectors (3.1%).
+  adapters (11× chance), ahead of subspace projectors (3.1%).
 - **The interpreter learns the adapters it trained on.** It names 70.3% of them, and swapping in
   another adapter's tokens drops that to 1.2%, so it is reading the tokens.
 - **It does not generalize to new adapters.** It names 1 of 384 question pairs from 96 withheld
