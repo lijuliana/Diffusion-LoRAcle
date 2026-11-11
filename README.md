@@ -5,8 +5,6 @@ running the diffusion model? This repo ports
 [LoRAcles](https://openreview.net/forum?id=x9MbM7QmQN) (De Schamphelaere et al., 2026) from
 text-model adapters to FLUX LoRAs.
 
-Paper: `paper/main.pdf` (NeurIPS 2026 workshop, Interpretability as a Science).
-
 ## Why
 
 - Checking what an image LoRA does means loading the base model, generating images, and looking at
