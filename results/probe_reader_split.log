@@ -1,0 +1,5 @@
+split from results/sweep8/e25_real.json: train 429 adapters | held-out 96 adapters
+tokens found for 525 adapters | train 429 | held-out 96 | 105 training concepts, chance 0.0095
+
+representation           train  held-out  xchance    top5       NN       k/n
+tokens_meanpool_std      1.000     0.042      4.4   0.125    0.094      4/96
